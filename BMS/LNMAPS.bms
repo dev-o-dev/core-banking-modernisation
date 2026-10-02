@@ -1,0 +1,121 @@
+***********************************************************************
+* MAPSET   : LNMAPS                                                   *
+* TITLE    : PERSONAL LOANS - BRANCH ENQUIRY                          *
+* PROGRAM  : LNSCRN1   TRANSACTION LN01                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(LNMAPS)    *
+*---------------------------------------------------------------------*
+* 2010-10-04 JNB  ORIGINAL VERSION                                    *
+***********************************************************************
+LNMAPS   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+LNM01    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='LN01'
+         DFHMDF POS=(1,20),LENGTH=38,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  PERSONAL LOAN ENQUIRY'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- KEY ---------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=12,ATTRB=(ASKIP,NORM),                X
+               INITIAL='LOAN NUMBER:'
+LOANNO   DFHMDF POS=(3,14),LENGTH=10,ATTRB=(UNPROT,BRT,IC,FSET),       X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,25),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,30),LENGTH=15,ATTRB=(ASKIP,NORM),               X
+               INITIAL='OR CUSTOMER NO:'
+LNCIF    DFHMDF POS=(3,46),LENGTH=12,ATTRB=(UNPROT,BRT,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,59),LENGTH=1,ATTRB=ASKIP
+*        ---- DETAIL ------------------------------------------------
+         DFHMDF POS=(5,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='STATUS   :'
+LSTAT    DFHMDF POS=(5,12),LENGTH=12,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(5,30),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='PRODUCT  :'
+LPROD    DFHMDF POS=(5,41),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(5,56),LENGTH=9,ATTRB=(ASKIP,NORM),                X
+               INITIAL='FORBEAR :'
+LFBR     DFHMDF POS=(5,66),LENGTH=1,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(6,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='ADVANCED :'
+LADV     DFHMDF POS=(6,12),LENGTH=14,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(6,30),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ON       :'
+LADVDT   DFHMDF POS=(6,41),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(6,56),LENGTH=9,ATTRB=(ASKIP,NORM),                X
+               INITIAL='TERM    :'
+LTERM    DFHMDF POS=(6,66),LENGTH=3,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(7,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='RATE     :'
+LRATE    DFHMDF POS=(7,12),LENGTH=9,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(7,30),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='APR      :'
+LAPR     DFHMDF POS=(7,41),LENGTH=6,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(7,56),LENGTH=9,ATTRB=(ASKIP,NORM),                X
+               INITIAL='REMAIN  :'
+LREM     DFHMDF POS=(7,66),LENGTH=3,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(8,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='PAYMENT  :'
+LPMT     DFHMDF POS=(8,12),LENGTH=14,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(8,30),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='NEXT DUE :'
+LNXTDT   DFHMDF POS=(8,41),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(8,56),LENGTH=9,ATTRB=(ASKIP,NORM),                X
+               INITIAL='FINAL   :'
+LFINDT   DFHMDF POS=(8,66),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(9,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='PRINCIPAL:'
+LPRIN    DFHMDF POS=(9,12),LENGTH=14,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(9,30),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='INTEREST :'
+LINT     DFHMDF POS=(9,41),LENGTH=12,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(9,56),LENGTH=9,ATTRB=(ASKIP,NORM),                X
+               INITIAL='FEES    :'
+LFEES    DFHMDF POS=(9,66),LENGTH=12,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(10,1),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ARREARS  :'
+LARR     DFHMDF POS=(10,12),LENGTH=14,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(10,30),LENGTH=10,ATTRB=(ASKIP,NORM),              X
+               INITIAL='MISSED   :'
+LMISS    DFHMDF POS=(10,41),LENGTH=3,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(10,56),LENGTH=9,ATTRB=(ASKIP,NORM),               X
+               INITIAL='INT PAID:'
+LINTPD   DFHMDF POS=(10,66),LENGTH=13,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(11,1),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='REPAY A/C:'
+LRPAY    DFHMDF POS=(11,12),LENGTH=15,ATTRB=(ASKIP,BRT)
+*        ---- SCHEDULE / LOAN LIST -------------------------------
+SCHHDR   DFHMDF POS=(13,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+SCH1     DFHMDF POS=(14,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+SCH2     DFHMDF POS=(15,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+SCH3     DFHMDF POS=(16,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+SCH4     DFHMDF POS=(17,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+SCH5     DFHMDF POS=(18,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+SCH6     DFHMDF POS=(19,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+SCH7     DFHMDF POS=(20,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(21,1),LENGTH=18,ATTRB=(ASKIP,NORM),               X
+               INITIAL='SETTLEMENT AMOUNT:'
+LSETTL   DFHMDF POS=(21,20),LENGTH=14,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(21,36),LENGTH=9,ATTRB=(ASKIP,NORM),               X
+               INITIAL='VALID TO:'
+LVALID   DFHMDF POS=(21,46),LENGTH=10,ATTRB=(ASKIP,BRT)
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=53,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=ENQUIRE PF3=EXIT PF5=SETTLEMENT QUOTE PF1X
+               2=CF02'
+*
+         DFHMSD TYPE=FINAL
+         END

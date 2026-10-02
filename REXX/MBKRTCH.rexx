@@ -1,0 +1,524 @@
+/* REXX ***************************************************************/
+/* EXEC     : MBKRTCH                                                 */
+/* TITLE    : INTEREST RATE CHANGE CARDS - KEY, APPROVE, RELEASE      */
+/* LIBRARY  : MBK.PRD.REXX                                            */
+/* INVOKE   : MBKMENU OPTION 2  (%MBKRTCH APPROVE FROM OPTION A)      */
+/* PANELS   : MBKRT1   RATE CHANGE ENTRY                              */
+/*            MBKRT2   APPROVAL LIST                                  */
+/*            MBKRT3   RELEASE AND SUBMIT CONFIRMATION                */
+/*            MBKREJ1  REJECTION REASON (SHARED)                      */
+/*            MBKRTH   HELP                                           */
+/* BATCH    : INRAT01 / INRAT010 (SKELETON INRAT01S)                  */
+/*--------------------------------------------------------------------*/
+/* OUTPUT   : <HLQ>.INT.RATECHG.INPUT(+1)  FB 100 - COPYBOOK RTCHGREC */
+/*                                                                    */
+/*  COLS  1-10 RTC-PROD-CD         COLS 41-44 RTC-REASON-CD           */
+/*  COLS 11-18 RTC-EFFECTIVE-DATE  COLS 45    RTC-BASE-RATE-IND       */
+/*  COLS 19    RTC-RATE-TYPE       COLS 46-49 RTC-NOTICE-COUNT  PIC   */
+/*  COLS 20    RTC-TIER                       9(7) COMP-3 (4 BYTES)   */
+/*  COLS 21-22 FILLER (KEY)        COLS 50-57 RTC-APPLIED-DATE        */
+/*  COLS 23-26 RTC-OLD-RATE  PIC   COLS 58-65 RTC-REQUESTED-BY        */
+/*             S9(3)V9(4) COMP-3   COLS 66-73 RTC-APPROVED-BY         */
+/*  COLS 27-30 RTC-NEW-RATE  DITTO COLS 74-100 FILLER                 */
+/*  COLS 31    RTC-DIRECTION                                          */
+/*  COLS 32-39 RTC-ANNOUNCE-DATE                                      */
+/*  COLS 40    RTC-STATUS                                             */
+/*                                                                    */
+/* THE RATES ARE PACKED DECIMAL - THE CARD CANNOT BE KEYED IN ISPF    */
+/* EDIT, WHICH IS WHY THIS DIALOG EXISTS. OLD RATE, DIRECTION,        */
+/* ANNOUNCE DATE, STATUS, NOTICE COUNT AND APPLIED DATE ARE SET BY    */
+/* INRAT010 - THE DIALOG SENDS ZEROES / SPACES.                       */
+/*--------------------------------------------------------------------*/
+/* NB THE COPYBOOK NAMES <HLQ>.INT.RATECHG.INPUT(0) BUT JOB INRAT01   */
+/* STILL HAS RATEIN DD DSN=MBK.PRD.CNTL(RATECHG) FROM THE 2010 JCL    */
+/* REWRITE (CNTL IS FB 80 - THE MEMBER IS NEVER USED). SKELETON       */
+/* INRAT01S OVERRIDES RATEIN TO THE GDG. PIR 2014/221 TO FIX THE JCL. */
+/*--------------------------------------------------------------------*/
+/* FLOW                                                               */
+/*  1. PRODUCT CONTROL (LEVEL K) KEYS ONE CHANGE PER PRODUCT / RATE.  */
+/*     THE SCREEN STAYS UP WITH THE DATE AND REASON SO A BASE RATE    */
+/*     CHANGE ACROSS MANY PRODUCTS CAN BE KEYED QUICKLY.              */
+/*  2. A SECOND USER (LEVEL A) APPROVES - MEMBER RENAMED P* -> A*.    */
+/*  3. RELEASE (LEVEL S): ALL APPROVED CHANGES ARE WRITTEN TO A NEW   */
+/*     GENERATION AND INRAT01 IS SUBMITTED. INRAT01 ONLY READS (0),   */
+/*     SO RELEASE MUST BE FOLLOWED BY THE RUN BEFORE ANOTHER RELEASE  */
+/*     - THE DIALOG REFUSES A RELEASE IF THE LAST ONE HAS NOT RUN     */
+/*     (RELEASE MARKER IN THE SHARED PROFILE TABLE MBKRTREL).         */
+/*--------------------------------------------------------------------*/
+/* 2004-03-15 SAT  ORIGINAL - CLIST MBKRTCH (KEYED VIA ISPF EDIT ON   */
+/*                 A ZONED COPY, PACKED BY A DFSORT STEP)             */
+/* 2008-10-08 AOS  BASE RATE INDICATOR (BANK RATE CUTS OCT 2008)      */
+/* 2010-04-12 AOS  REWRITTEN IN REXX, PACKS THE RATES ITSELF, PANEL   */
+/*                 MBKRT1. DFSORT STEP REMOVED FROM INRAT01.          */
+/* 2013-01-21 PDQ  PENDING QUEUE / FOUR EYES VIA MBKPEND              */
+/* 2014-06-02 PDQ  NOTICE PERIOD WARNING ON THE ENTRY PANEL           */
+/* 2020-03-11 RKS  BASE RATE 0.25 / 0.10 - MASS ENTRY KEEPS REASON    */
+/**********************************************************************/
+TRACE O
+NUMERIC DIGITS 18
+PARSE UPPER ARG MODE .
+IF MODE = '' THEN MODE = 'NEW'
+FUNC = 'RT'
+
+IF SYSVAR('SYSISPF') <> 'ACTIVE' THEN DO
+   SAY 'MBKRTCH - RUN FROM THE MBKMENU DIALOG'
+   EXIT 12
+END
+ADDRESS ISPEXEC
+"CONTROL ERRORS RETURN"
+"VGET (MBKHLQ MBKBDATE MBKNDATE) SHARED"
+IF MBKHLQ = '' | MBKBDATE = '' THEN DO
+   CALL MSG 'START FROM MBKMENU',,
+      'MBKRTCH MUST BE STARTED FROM THE MBKMENU DIALOG'
+   EXIT 12
+END
+RTDSN  = MBKHLQ'.INT.RATECHG.INPUT'
+USER   = USERID()
+NOTICE_DAYS = 14
+REASONS = 'BOER MKTR PRDR CMPT CORR NPRD'
+
+SELECT
+   WHEN MODE = 'NEW'     THEN CALL KEY_CHANGES
+   WHEN MODE = 'APPROVE' THEN CALL APPROVE_LIST
+   WHEN MODE = 'RELEASE' THEN CALL RELEASE_CHANGES
+   OTHERWISE CALL MSG 'INVALID MODE', 'MBKRTCH - MODE' MODE
+END
+EXIT 0
+
+/*====================================================================*/
+/* KEY RATE CHANGES                                                   */
+/*====================================================================*/
+KEY_CHANGES:
+   IF MBKAUTH('CHECK', FUNC, 'K') <> 0 THEN DO
+      CALL AUDIT 'DENIED', '', 'KEY RATE CHANGE - NO LEVEL K'
+      CALL MSG 'NOT AUTHORISED',,
+         'YOU ARE NOT AUTHORISED TO KEY INTEREST RATE CHANGES.'
+      RETURN
+   END
+   RTPROD = ''; RTTYPE = ''; RTTIER = ''; RTNEW = ''; RTCUR = ''
+   RTEFF = ''; RTRSN = ''; RTBASE = 'N'; RTWARN = ''; RTACK = ''
+   "VGET (RTEFF RTRSN RTBASE) PROFILE"
+   IF RTEFF < MBKBDATE THEN RTEFF = ''
+   RTBDATE = MBKBDATE
+   RTKEYED = 0
+   DO FOREVER
+      "DISPLAY PANEL(MBKRT1)"
+      IF RC >= 8 THEN LEAVE
+      "VPUT (RTEFF RTRSN RTBASE) PROFILE"
+      ERR = VALIDATE_ENTRY()
+      IF ERR <> '' THEN DO
+         CALL MSG 'CHANGE NOT SAVED', ERR
+         ITERATE
+      END
+      /* ADVERSE CHANGE INSIDE THE NOTICE PERIOD - WARN ONCE, THE  */
+      /* USER MUST ACKNOWLEDGE (INRAT010 WILL REJECT IT ANYWAY)    */
+      IF RTWARN <> '' & RTACK <> 'Y' THEN DO
+         CALL MSG 'NOTICE PERIOD', RTWARN 'ENTER Y IN ACKNOWLEDGE TO',
+            'SAVE ANYWAY (INRAT010 WILL REJECT IT) OR CHANGE THE DATE.'
+         ITERATE
+      END
+      CALL SAVE_CHANGE
+      IF RESULT = 0 THEN DO
+         RTKEYED = RTKEYED + 1
+         /* KEEP DATE / REASON / BASE FOR THE NEXT PRODUCT */
+         RTPROD = ''; RTNEW = ''; RTCUR = ''; RTTIER = ''
+         RTWARN = ''; RTACK = ''
+      END
+   END
+   IF RTKEYED > 0 THEN CALL MSG RTKEYED 'CHANGE(S) SAVED',,
+      RTKEYED 'RATE CHANGE(S) ARE WAITING FOR APPROVAL.'
+   RETURN
+
+/*--------------------------------------------------------------------*/
+/* VALIDATION (MIRRORS INRAT010 2100-VALIDATE-CHANGE)                 */
+/*--------------------------------------------------------------------*/
+VALIDATE_ENTRY:
+   RTWARN = ''
+   RTPROD = TRANSLATE(STRIP(RTPROD))
+   IF RTPROD = '' THEN RETURN 'PRODUCT CODE REQUIRED.'
+   IF \DATATYPE(RTPROD,'A') THEN RETURN 'PRODUCT CODE IS ALPHANUMERIC.'
+   IF \VALID_DATE(RTEFF) THEN RETURN 'EFFECTIVE DATE' RTEFF,
+      'IS NOT A VALID CCYYMMDD DATE.'
+   IF RTEFF < MBKBDATE THEN RETURN 'EFFECTIVE DATE IS IN THE PAST.'
+   IF WORDPOS(RTTYPE, 'C B A U') = 0 THEN,
+      RETURN 'RATE TYPE MUST BE C, B, A OR U.'
+   IF RTTYPE = 'C' THEN DO
+      IF \DATATYPE(RTTIER,'W') THEN RETURN 'TIER 1-5 REQUIRED FOR C.'
+      IF RTTIER < 1 | RTTIER > 5 THEN RETURN 'TIER MUST BE 1-5.'
+   END
+   ELSE DO
+      IF RTTIER <> '' & RTTIER <> '0' THEN,
+         RETURN 'TIER IS ONLY ENTERED FOR RATE TYPE C.'
+      RTTIER = 0
+   END
+   V = STRIP(RTNEW)
+   IF \DATATYPE(V,'N') | VERIFY(V,'0123456789.') > 0 THEN,
+      RETURN 'NEW RATE MUST BE A NUMBER 0.0000-99.9999.'
+   IF V < 0 | V > 99.9999 THEN RETURN 'NEW RATE MUST BE 0-99.9999.'
+   IF DECS(V) > 4 THEN RETURN 'NEW RATE HAS AT MOST 4 DECIMALS.'
+   RTNEW = FORMAT(V,,4)
+   IF WORDPOS(RTRSN, REASONS) = 0 THEN,
+      RETURN 'REASON MUST BE ONE OF' REASONS'.'
+   IF RTBASE <> 'Y' & RTBASE <> 'N' THEN RETURN 'BASE RATE IND Y/N.'
+   IF RTBASE = 'Y' & RTRSN <> 'BOER' THEN,
+      RETURN 'BASE RATE TRACKER CHANGES MUST HAVE REASON BOER.'
+   /* OPTIONAL CURRENT RATE - ONLY USED FOR THE NOTICE WARNING */
+   IF RTCUR <> '' THEN DO
+      C = STRIP(RTCUR)
+      IF \DATATYPE(C,'N') | C < 0 | C > 99.9999 THEN,
+         RETURN 'CURRENT RATE MUST BE A NUMBER 0-99.9999 OR BLANK.'
+      RTCUR = FORMAT(C,,4)
+      IF RTCUR = RTNEW THEN RETURN 'NEW RATE EQUALS CURRENT RATE.'
+      ADVERSE = ((RTTYPE = 'C' | RTTYPE = 'B') & RTNEW < RTCUR) |,
+                ((RTTYPE = 'A' | RTTYPE = 'U') & RTNEW > RTCUR)
+      DAYS = DATE('B', RTEFF, 'S') - DATE('B', MBKBDATE, 'S')
+      IF ADVERSE & RTBASE <> 'Y' & DAYS < NOTICE_DAYS THEN,
+         RTWARN = 'ADVERSE CHANGE WITH ONLY' DAYS 'DAYS NOTICE',
+            '(BCOBS 4 NEEDS' NOTICE_DAYS').'
+   END
+   RETURN ''
+
+/*--------------------------------------------------------------------*/
+/* BUILD THE 100-BYTE RTCHGREC CARD                                   */
+/*--------------------------------------------------------------------*/
+MAKE_CARD:
+   OLDR = 0
+   IF RTCUR <> '' THEN OLDR = RTCUR
+   C = LEFT(RTPROD, 10)          ||,  /*  1-10 PROD-CD             */
+       RIGHT(RTEFF, 8, '0')      ||,  /* 11-18 EFFECTIVE-DATE      */
+       LEFT(RTTYPE, 1)           ||,  /* 19    RATE-TYPE           */
+       RIGHT(RTTIER, 1, '0')     ||,  /* 20    TIER                */
+       '  '                      ||,  /* 21-22 FILLER (KEY)        */
+       PACK(OLDR, 7, 4)          ||,  /* 23-26 OLD-RATE   COMP-3   */
+       PACK(RTNEW, 7, 4)         ||,  /* 27-30 NEW-RATE   COMP-3   */
+       ' '                       ||,  /* 31    DIRECTION           */
+       '00000000'                ||,  /* 32-39 ANNOUNCE-DATE       */
+       ' '                       ||,  /* 40    STATUS              */
+       LEFT(RTRSN, 4)            ||,  /* 41-44 REASON-CD           */
+       LEFT(RTBASE, 1)           ||,  /* 45    BASE-RATE-IND       */
+       PACK(0, 7, 0)             ||,  /* 46-49 NOTICE-COUNT COMP-3 */
+       '00000000'                ||,  /* 50-57 APPLIED-DATE        */
+       LEFT(USER, 8)             ||,  /* 58-65 REQUESTED-BY        */
+       LEFT('', 8)               ||,  /* 66-73 APPROVED-BY         */
+       LEFT('', 27)                   /* 74-100 FILLER             */
+   IF LENGTH(C) <> 100 THEN DO
+      CALL MSG 'INTERNAL ERROR', 'CARD LENGTH' LENGTH(C) '- NOT SAVED'
+      RETURN ''
+   END
+   RETURN C
+
+SAVE_CHANGE:
+   CARD = MAKE_CARD()
+   IF CARD = '' THEN RETURN 8
+   MEM = MBKPEND('NEWMEM', FUNC, 'P')
+   IF MEM = '' THEN RETURN 8
+   RREF = 'R'SUBSTR(DATE('S'),3,4)SUBSTR(MEM,2,7)
+   HDR = LEFT('*PEND',6)LEFT(FUNC,4)LEFT(RREF,13)LEFT(USER,9),
+      || LEFT(DATE('S'),9)LEFT(SPACE(TRANSLATE(TIME('N'),' ',':'),0),7),
+      || LEFT('',9)LEFT(RTPROD RTTYPE||RTTIER RTNEW, 23)
+   QUEUE CARD
+   IF MBKPEND('WRITE', FUNC, MEM, HDR) <> 0 THEN RETURN 8
+   WTXT = ''
+   IF RTWARN <> '' THEN WTXT = 'NOTICE WARNING ACKNOWLEDGED'
+   CALL AUDIT 'REQUEST', RREF, RTPROD 'TYPE' RTTYPE 'TIER' RTTIER,
+      'NEW' RTNEW 'EFF' RTEFF 'RSN' RTRSN 'BASE' RTBASE WTXT
+   CALL MSG 'SAVED' RREF, 'RATE CHANGE' RREF 'FOR' RTPROD 'SAVED',
+      'FOR APPROVAL. KEY THE NEXT PRODUCT OR PF3 TO FINISH.'
+   RETURN 0
+
+/*====================================================================*/
+/* APPROVAL LIST                                                      */
+/*====================================================================*/
+APPROVE_LIST:
+   IF POS('A', MBKAUTH('LEVELS', FUNC)) = 0 THEN DO
+      CALL AUDIT 'DENIED', '', 'RATE APPROVAL - NO LEVEL A'
+      CALL MSG 'NOT AUTHORISED', 'YOU ARE NOT A RATE CHANGE APPROVER.'
+      RETURN
+   END
+   APPROVED_NOW = 0
+   DO FOREVER
+      "TBCREATE RTAPPR NOWRITE REPLACE",
+         "NAMES(ASEL AMEM AREF AUSER ADATE APROD ATYPE ATIER ANEW",
+         "AEFF ARSN ABASE ASTAT)"
+      DO PASS = 1 TO 2
+         PAT = WORD('P* A*', PASS)
+         N = MBKPEND('LIST', FUNC, PAT)
+         IF \DATATYPE(N,'W') | N < 0 THEN RETURN
+         DO I = 1 TO N; PARSE PULL M.I; END
+         DO I = 1 TO N
+            AMEM = M.I
+            IF READ_ITEM(AMEM) <> 0 THEN ITERATE
+            AREF = IREF; AUSER = IREQ; ADATE = IDATE
+            APROD = STRIP(LEFT(ICARD,10))
+            ATYPE = SUBSTR(ICARD,19,1)
+            ATIER = SUBSTR(ICARD,20,1)
+            ANEW  = FORMAT(UNPACK(SUBSTR(ICARD,27,4), 4),,4)
+            AEFF  = SUBSTR(ICARD,11,8)
+            ARSN  = SUBSTR(ICARD,41,4)
+            ABASE = SUBSTR(ICARD,45,1)
+            IF PASS = 1 THEN ASTAT = 'PENDING'
+            ELSE ASTAT = 'APPR' STRIP(SUBSTR(ICARD,66,8))
+            ASEL = ''
+            "TBADD RTAPPR"
+         END
+      END
+      "TBTOP RTAPPR"
+      "TBDISPLAY RTAPPR PANEL(MBKRT2)"
+      IF RC >= 8 THEN DO
+         "TBEND RTAPPR"
+         LEAVE
+      END
+      CMD = TRANSLATE(STRIP(ZCMD)); ZCMD = ''
+      DO WHILE ZTDSELS > 0
+         SEL = TRANSLATE(ASEL)
+         SELECT
+            WHEN SEL = 'A' THEN CALL APPROVE_ITEM AMEM
+            WHEN SEL = 'R' THEN CALL REJECT_ITEM AMEM
+            OTHERWISE NOP
+         END
+         IF ZTDSELS > 1 THEN "TBDISPLAY RTAPPR"
+         ELSE ZTDSELS = 0
+      END
+      "TBEND RTAPPR"
+      IF CMD = 'RELEASE' THEN CALL RELEASE_CHANGES
+   END
+   IF APPROVED_NOW > 0 THEN DO
+      CALL MSG APPROVED_NOW 'APPROVED', APPROVED_NOW 'RATE CHANGE(S)',
+         'APPROVED. ENTER RELEASE ON THE APPROVAL LIST, OR MBKMENU',
+         'OPTION 2.RELEASE, TO WRITE THEM AND SUBMIT INRAT01.'
+   END
+   RETURN
+
+APPROVE_ITEM:
+   PARSE ARG IMEM
+   IF LEFT(IMEM,1) <> 'P' THEN DO
+      CALL MSG 'ALREADY APPROVED', IREF 'IS ALREADY APPROVED.'
+      RETURN
+   END
+   IF READ_ITEM(IMEM) <> 0 THEN RETURN
+   FE = MBKAUTH('FOUREYES', FUNC, IREQ)
+   IF FE <> 0 THEN DO
+      IF FE = 4 THEN T = 'YOU KEYED' IREF '- A SECOND USER MUST',
+         'APPROVE IT.'
+      ELSE T = 'YOU ARE NOT A RATE CHANGE APPROVER.'
+      CALL AUDIT 'DENIED', IREF, 'APPROVE - FOUREYES RC' FE
+      CALL MSG 'CANNOT APPROVE', T
+      RETURN
+   END
+   IF SUBSTR(ICARD,58,8) <> LEFT(IREQ,8) |,
+      SUBSTR(ICARD,66,8) <> '' THEN DO
+      CALL AUDIT 'ERROR', IREF, 'MEMBER' IMEM 'ALTERED'
+      CALL MSG 'ITEM INVALID', IREF 'HAS BEEN ALTERED OUTSIDE THE',
+         'DIALOG - REJECT IT AND REPORT TO SECURITY.'
+      RETURN
+   END
+   IF SUBSTR(ICARD,11,8) < MBKBDATE THEN DO
+      CALL MSG 'DATE PASSED', IREF 'IS NOW IN THE PAST - REJECT IT.'
+      RETURN
+   END
+   ICARD = OVERLAY(LEFT(USER,8), ICARD, 66)
+   IHDR  = OVERLAY(LEFT(USER,8), IHDR, 49)
+   NEWM  = 'A'SUBSTR(IMEM,2)
+   QUEUE ICARD
+   IF MBKPEND('WRITE', FUNC, NEWM, IHDR) <> 0 THEN RETURN
+   IF MBKPEND('DELETE', FUNC, IMEM) <> 0 THEN DO
+      CALL AUDIT 'ERROR', IREF, 'P MEMBER' IMEM 'NOT DELETED'
+      RETURN
+   END
+   CALL AUDIT 'APPROVE', IREF, STRIP(LEFT(ICARD,10)) 'REQUESTED BY',
+      IREQ
+   APPROVED_NOW = APPROVED_NOW + 1
+   CALL OUTTRAP 'X.'
+   ADDRESS TSO "SEND 'MBK: RATE CHANGE" IREF "APPROVED BY" USER"'",
+      "USER("IREQ") LOGON"
+   CALL OUTTRAP 'OFF'
+   RETURN
+
+REJECT_ITEM:
+   PARSE ARG IMEM
+   IF READ_ITEM(IMEM) <> 0 THEN RETURN
+   IF POS('A', MBKAUTH('LEVELS', FUNC)) = 0 & IREQ <> USER THEN DO
+      CALL MSG 'NOT AUTHORISED', 'ONLY AN APPROVER OR THE REQUESTER',
+         'MAY REJECT A RATE CHANGE.'
+      RETURN
+   END
+   RJKEY = IREF; RJTEXT = ''
+   "ADDPOP ROW(6) COLUMN(10)"
+   "DISPLAY PANEL(MBKREJ1)"
+   PRC = RC
+   "REMPOP"
+   IF PRC >= 8 THEN RETURN
+   IF MBKPEND('DELETE', FUNC, IMEM) <> 0 THEN RETURN
+   CALL AUDIT 'REJECT', IREF, RJTEXT
+   IF IREQ <> USER THEN DO
+      CALL OUTTRAP 'X.'
+      ADDRESS TSO "SEND 'MBK: RATE CHANGE" IREF "REJECTED BY" USER,
+         "-" LEFT(RJTEXT,40)"' USER("IREQ") LOGON"
+      CALL OUTTRAP 'OFF'
+   END
+   CALL MSG IREF 'REJECTED', 'RATE CHANGE' IREF 'REJECTED.'
+   RETURN
+
+READ_ITEM:
+   PARSE ARG RMEM
+   C = MBKPEND('READ', FUNC, RMEM)
+   IF \DATATYPE(C,'W') | C < 1 THEN DO
+      CALL MSG 'NOT FOUND', 'MEMBER' RMEM 'IS EMPTY OR WAS PROCESSED',
+         'BY ANOTHER USER.'
+      RETURN 8
+   END
+   PARSE PULL IHDR
+   PARSE PULL ICARD
+   DO C - 1; PULL .; END
+   PARSE VAR IHDR 11 IREF 23 . 24 IREQ 32 . 33 IDATE 41 .
+   IREF = STRIP(IREF); IREQ = STRIP(IREQ)
+   RETURN 0
+
+/*====================================================================*/
+/* RELEASE - ALL APPROVED CHANGES TO A NEW GENERATION + SUBMIT        */
+/*====================================================================*/
+RELEASE_CHANGES:
+   IF MBKAUTH('CHECK', FUNC, 'S') <> 0 THEN DO
+      CALL AUDIT 'DENIED', '', 'RELEASE - NO LEVEL S'
+      CALL MSG 'NOT AUTHORISED', 'RELEASE NEEDS SUBMIT AUTHORITY (S).'
+      RETURN
+   END
+   N = MBKPEND('LIST', FUNC, 'A*')
+   IF \DATATYPE(N,'W') | N < 0 THEN RETURN
+   IF N = 0 THEN DO
+      CALL MSG 'NOTHING TO RELEASE', 'THERE ARE NO APPROVED RATE',
+         'CHANGES WAITING.'
+      RETURN
+   END
+   DO I = 1 TO N; PARSE PULL REL.I; END
+   REL.0 = N
+
+   /* HAS THE LAST RELEASE BEEN PROCESSED? COMPARE THE GENERATION  */
+   /* WE LAST WROTE WITH THE ONE INRAT01 LAST READ (ITS REPORT     */
+   /* IS NOT AVAILABLE TO US, SO WE USE THE RATEPEND LAST-REFERENCE */
+   /* DATE FROM LISTDSI AS A PROXY - CRUDE BUT SAFE)                */
+   "VGET (MBKRTREL) PROFILE"
+   IF MBKRTREL <> '' THEN DO
+      PARSE VAR MBKRTREL LGEN LDATE LTIME .
+      X = LISTDSI("'"MBKHLQ".INT.RATEPEND'" 'NORECALL')
+      IF X = 0 & SYSREFDATE <> '' THEN DO
+         RDAT = JUL2STD(SYSREFDATE)
+         IF RDAT < LDATE THEN DO
+            CALL MSG 'LAST RELEASE NOT RUN', 'GENERATION' LGEN,
+               'RELEASED ON' LDATE 'HAS NOT BEEN PROCESSED BY',
+               'INRAT01 YET. RUN IT FIRST OR CALL CORE SYSTEMS.'
+            RETURN
+         END
+      END
+   END
+
+   RLCOUNT = N
+   RLCONF = ''
+   "DISPLAY PANEL(MBKRT3)"
+   IF RC >= 8 | RLCONF <> 'Y' THEN RETURN
+
+   OUT.0 = 0
+   REFS = ''
+   DO I = 1 TO REL.0
+      IF READ_ITEM(REL.I) <> 0 THEN ITERATE
+      IF SUBSTR(ICARD,66,8) = '' THEN ITERATE  /* NOT APPROVED */
+      K = OUT.0 + 1
+      OUT.K = ICARD
+      OUT.0 = K
+      MEMS.K = REL.I
+      REFS = REFS IREF
+   END
+   IF OUT.0 = 0 THEN RETURN
+
+   ADDRESS TSO "ALLOC F(RTNEW) DA('"RTDSN"(+1)') NEW CATALOG",
+      "UNIT(SYSDA) SPACE(1 1) TRACKS RELEASE",
+      "RECFM(F B) LRECL(100) BLKSIZE(0) REUSE"
+   IF RC <> 0 THEN DO
+      CALL MSG 'ALLOCATION FAILED', 'CANNOT CREATE' RTDSN'(+1) RC='RC
+      RETURN
+   END
+   ADDRESS TSO "EXECIO" OUT.0 "DISKW RTNEW (STEM OUT. FINIS"
+   WRC = RC
+   X = LISTDSI('RTNEW' 'FILE')
+   GEN = SYSDSNAME
+   ADDRESS TSO "FREE F(RTNEW)"
+   IF WRC <> 0 THEN DO
+      CALL AUDIT 'ERROR', '', 'RELEASE WRITE' GEN 'RC='WRC
+      CALL MSG 'WRITE FAILED', 'WRITE TO' GEN 'FAILED RC='WRC
+      RETURN
+   END
+   DO I = 1 TO OUT.0
+      CALL MBKPEND 'DELETE', FUNC, MEMS.I
+   END
+   CALL AUDIT 'RELEASE', RIGHT(GEN,8), OUT.0 'CHANGE(S):' STRIP(REFS)
+   MBKRTREL = RIGHT(GEN,8) DATE('S') TIME('N')
+   "VPUT (MBKRTREL) PROFILE"
+
+   SRATEDSN = GEN
+   "VPUT (SRATEDSN) SHARED"
+   SRC = MBKSUBMT('INRAT01S', FUNC, RIGHT(GEN,8), 'RATE CHANGES')
+   IF SRC <> 0 THEN CALL MSG 'RELEASED - NOT SUBMITTED', OUT.0,
+      'CHANGE(S) WRITTEN TO' GEN'. INRAT01 WAS NOT SUBMITTED - RAISE',
+      'A CA-7 DEMAND FOR INRAT01 WITH RATEIN OVERRIDDEN TO' GEN'.'
+   RETURN
+
+/*====================================================================*/
+/* UTILITIES                                                          */
+/*====================================================================*/
+/* PACK A DECIMAL VALUE INTO COMP-3 - DIGITS = TOTAL PICTURE DIGITS,  */
+/* SCALE = DIGITS AFTER THE V. SIGN NIBBLE C (+) OR D (-).            */
+PACK: PROCEDURE
+   PARSE ARG VAL, DIGITS, SCALE
+   NUMERIC DIGITS 31
+   N = TRUNC(VAL * (10 ** SCALE))
+   SIGN = 'C'
+   IF N < 0 THEN SIGN = 'D'
+   NIB = (DIGITS % 2) * 2 + 1
+   RETURN X2C(RIGHT(ABS(N), NIB, '0') || SIGN)
+
+UNPACK: PROCEDURE
+   PARSE ARG STR, SCALE
+   NUMERIC DIGITS 31
+   H = C2X(STR)
+   S = RIGHT(H, 1)
+   D = LEFT(H, LENGTH(H) - 1)
+   IF \DATATYPE(D, 'W') THEN RETURN 0
+   N = D / (10 ** SCALE)
+   IF S = 'D' | S = 'B' THEN N = -N
+   RETURN N
+
+DECS: PROCEDURE
+   PARSE ARG N
+   IF POS('.', N) = 0 THEN RETURN 0
+   RETURN LENGTH(STRIP(SUBSTR(N, POS('.', N) + 1), 'T', '0'))
+
+/* LISTDSI DATES ARE YYYY/DDD */
+JUL2STD: PROCEDURE
+   PARSE ARG Y '/' D
+   IF \DATATYPE(Y,'W') | \DATATYPE(D,'W') THEN RETURN '00000000'
+   RETURN DATE('S', RIGHT(Y,2)RIGHT(D,3,'0'), 'J')  /* YYDDD */
+
+VALID_DATE: PROCEDURE
+   PARSE ARG D
+   IF \DATATYPE(D,'W') | LENGTH(D) <> 8 THEN RETURN 0
+   Y = LEFT(D,4); M = SUBSTR(D,5,2); DD = RIGHT(D,2)
+   IF Y < 1900 | M < 1 | M > 12 | DD < 1 THEN RETURN 0
+   ML = WORD('31 28 31 30 31 30 31 31 30 31 30 31', M)
+   IF M = 2 & (Y // 4 = 0 & (Y // 100 <> 0 | Y // 400 = 0)) THEN,
+      ML = 29
+   RETURN DD <= ML
+
+AUDIT:
+   PARSE ARG AACT, AKEY, ATXT
+   CALL MBKAUDIT 'LOG', FUNC, AACT, AKEY, ATXT
+   IF RESULT <> 0 THEN,
+      CALL MSG 'AUDIT FAILURE', 'THE AUDIT LOG COULD NOT BE WRITTEN',
+         '- STOP AND CALL CORE SYSTEMS SUPPORT.'
+   RETURN
+
+MSG: PROCEDURE
+   PARSE ARG SHORT, LONG
+   ZEDSMSG = SHORT
+   ZEDLMSG = LONG
+   ADDRESS ISPEXEC "SETMSG MSG(ISRZ001)"
+   RETURN

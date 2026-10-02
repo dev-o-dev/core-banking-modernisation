@@ -1,0 +1,43 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKFX3                                                 */
+/* TITLE    : FX MAINTENANCE - CONFIRM (BEFORE / AFTER)              */
+/* EXEC     : FXMNT (CONFIRM_AND_SUBMIT)                             */
+/*-------------------------------------------------------------------*/
+/* THE BEFORE AND AFTER LINES ARE BUILT FROM THE 150-BYTE RECORD     */
+/* IMAGES (UNPACKED), NOT FROM THE PANEL FIELDS, SO WHAT IS SHOWN IS */
+/* WHAT WILL BE WRITTEN.                                             */
+/*-------------------------------------------------------------------*/
+/* 2018-02-05 RKS  ORIGINAL (INC 2018/0119)                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - CONFIRM FX CHANGE -/-/-
+%Command ===>_ZCMD                                                             +
++
++   Currency#FXCCY+    Change@FXWHAT                    +
++
+%   Before+
+#FXBEF                                                                      +
++   tiers (up to / bp)#FXBTIER                                              +
++
+%   After+
+@FXAFT                                                                      +
++   tiers (up to / bp)@FXATIER                                              +
++
++   Check the after line against the Treasury Operations request (form
++   TO-14).  On confirmation the record is staged and job FXMNT01 is
++   offered for submission.
++
++   Apply the change %===>_Z+  (Y or N)
+)INIT
+  .ZVARS  = '(FXCONF)'
+  .CURSOR = FXCONF
+  .HELP   = MBKFXH
+)PROC
+  VER (&FXCONF,NB,LIST,Y,N)
+)END

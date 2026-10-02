@@ -1,0 +1,47 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKSUB1                                                */
+/* TITLE    : SUBMIT BATCH JOB - CONFIRMATION                        */
+/* EXEC     : MBKSUBMT                                               */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2011-05-09 JNB  HOLD OPTION                                       */
+/* 2012-09-10 PDQ  OVERRIDE WARNING LINE                             */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED) CAPS(OFF) HILITE(REVERSE)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - SUBMIT BATCH JOB -/-/-
+%Command ===>_ZCMD                                                             +
++
++   Job name    #SJOBNAME+       Description#SJDESC              +
++   Submitted by#SUSER   +       For        #SKEY                +
++
+$SOVR                                                    +
++
++   Action     %===>_Z+     %S+Submit   %B+Browse the JCL first   %C+Cancel
++   Hold job   %===>_Z+     %Y+TYPRUN=HOLD (release in SDSF)   %N+run now
++   MSGCLASS   %===>_Z+     +(X = held output, normal)
++   Notify     %===>_Z+     %Y+tell me when the job ends
++
++   The job is tailored from skeleton#SJOBNAME+S in the dialog skeleton
++   library and submitted under your user ID.  The job ID is recorded in
++   the audit log.  Do%not+submit twice if the first submit appears to
++   hang - check SDSF first.
+)INIT
+  .ZVARS  = '(SACT SHOLD SMSGCLS SNOTIFY)'
+  .CURSOR = SACT
+  .HELP   = MBKMENUH
+  IF (&SACT = ' ')
+     &SACT = S
+  IF (&SHOLD = ' ')
+     &SHOLD = N
+)PROC
+  VER (&SACT,NB,LIST,S,B,C)
+  VER (&SHOLD,NB,LIST,Y,N)
+  VER (&SMSGCLS,NB,LIST,X,A,H)
+  VER (&SNOTIFY,NB,LIST,Y,N)
+)END

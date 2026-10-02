@@ -1,0 +1,55 @@
+)CM ******************************************************************
+)CM SKELETON : PRMNT01S
+)CM TITLE    : PRODUCT PARAMETER CHANGE SETS - ON-REQUEST RUN
+)CM BASED ON : MBK.PRD.JCL(PRMNT01) - KEEP IN STEP
+)CM CALLED BY: MBKPRDCH (APPROVE_SET) VIA MBKSUBMT
+)CM ------------------------------------------------------------------
+)CM VARIABLES
+)CM   SCHGDSN   CHANGES GDG BASE (MBK.PRD.PRD.CHANGES)
+)CM   SREFS     CHANGE REF(S) JUST APPROVED - FOR THE JOB COMMENTS
+)CM ------------------------------------------------------------------
+)CM PR005 LISTS THE CURRENT GENERATION SO THE REPORT SHOWS EXACTLY
+)CM WHICH CARDS WERE READ (PRODUCT CONTROL ASKED FOR THIS AFTER INC
+)CM 2010/0412). PR010 IS THE PRODUCTION STEP UNCHANGED.
+)CM ------------------------------------------------------------------
+)CM 2007-02-12 JNB  ORIGINAL
+)CM 2010-06-14 JNB  GDG / CARRY FORWARD (PRMNT01 REWRITE)
+)CM ******************************************************************
+)SET SDB2 = N
+)IM MBKJOBC
+//*------------------------------------------------------------------*
+//* PRMNT01 - PRODUCT PARAMETER CHANGE SETS (ON REQUEST)
+//* CHANGE SET(S) APPROVED: &SREFS
+//*------------------------------------------------------------------*
+//* PR005 - LIST THE CHANGE CARDS BEING PROCESSED
+//*------------------------------------------------------------------*
+//PR005    EXEC PGM=IEBGENER
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD DUMMY
+//SYSUT1   DD DISP=SHR,DSN=&SCHGDSN.(0)
+//SYSUT2   DD SYSOUT=*,DCB=(RECFM=FB,LRECL=120)
+//*------------------------------------------------------------------*
+//* PR010 - APPLY CHANGE SETS (PRMNT010)
+//*------------------------------------------------------------------*
+//PR010    EXEC MBKBATCH,PGM=PRMNT010,HLQ='&SHLQ'
+//STEP.CHANGES  DD DISP=SHR,DSN=&SCHGDSN.(0)
+//STEP.PRDPARM  DD DISP=OLD,DSN=&SHLQ..PRD.PARMS
+//STEP.CARRYFWD DD DSN=&SCHGDSN.(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(CYL,(1,1),RLSE),
+//            DCB=(RECFM=FB,LRECL=120,BLKSIZE=0)
+//STEP.AUDIT    DD DSN=&SHLQ..PRD.AUDIT(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(CYL,(1,1),RLSE),
+//            DCB=(RECFM=FB,LRECL=1021,BLKSIZE=0)
+//STEP.REPORT   DD SYSOUT=(R,,PRM1),
+//            DCB=(RECFM=FBA,LRECL=133,BLKSIZE=0)
+//*------------------------------------------------------------------*
+//* PR020 - TELL THE SUBMITTER (RC > 4 = SETS REJECTED - SEE REPORT)
+//*------------------------------------------------------------------*
+//PR020    EXEC PGM=IKJEFT01,COND=(4,GE,PR010.STEP)
+//SYSTSPRT DD SYSOUT=*
+//SYSTSIN  DD *
+ SEND 'PRMNT01 ENDED RC>4 - CHANGE SETS REJECTED, SEE PRM1 REPORT' +
+      USER(&SUSER) LOGON
+/*

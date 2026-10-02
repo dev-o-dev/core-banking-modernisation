@@ -1,0 +1,35 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKAPRQ                                                */
+/* TITLE    : APPROVAL QUEUE - FUNCTIONS WITH ITEMS AWAITING APPROVAL*/
+/* EXEC     : MBKMENU (APPROVAL_QUEUE) - TABLE MBKAPRQ               */
+/*-------------------------------------------------------------------*/
+/* 2013-01-21 PDQ  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - APPROVAL QUEUE -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Select a function with%S+to review its pending items.  Items you keyed
++yourself are listed but cannot be approved by you (four eyes).
++
+%S Func Description                          Pending  Your levels
+%- ---- ------------------------------------ -------  -----------
+)MODEL ROWS(SCAN)
+_Z+#AQFUNC#AQDESC                              +@AQCOUNT+ #AQLEVEL   +
+)INIT
+  .ZVARS = '(AQSEL)'
+  .HELP  = MBKMENUH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  &AQSEL = ' '
+)PROC
+  IF (&ZTDSELS NE 0000)
+     VER (&AQSEL,LIST,S)
+  VPUT (AMT) PROFILE
+)END

@@ -1,0 +1,177 @@
+***********************************************************************
+* MAPSET   : SOMAPS                                                   *
+* TITLE    : STANDING ORDERS - BRANCH LIST AND DETAIL                 *
+* PROGRAM  : SOSCRN1   TRANSACTION SO01                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(SOMAPS)    *
+*---------------------------------------------------------------------*
+* 2004-11-08 SAT  ORIGINAL VERSION (TELLER SO SCREENS REPLACED)       *
+* 2010-03-08 AOS  NOW CALLS SOMNT01 (SERVICE SOMAINT)                 *
+***********************************************************************
+SOMAPS   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+SOM01    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='SO01'
+         DFHMDF POS=(1,20),LENGTH=32,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  STANDING ORDERS'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- KEY ---------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='SORT CODE:'
+SORTCD   DFHMDF POS=(3,12),LENGTH=6,ATTRB=(UNPROT,BRT,IC,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,19),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,22),LENGTH=8,ATTRB=(ASKIP,NORM),                X
+               INITIAL='ACCOUNT:'
+ACCTNO   DFHMDF POS=(3,31),LENGTH=8,ATTRB=(UNPROT,BRT,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,40),LENGTH=1,ATTRB=ASKIP
+*        ---- LIST ---------------------------------------------------
+         DFHMDF POS=(5,1),LENGTH=79,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='S SEQ  ST BENEFICIARY               SORT CD  ACX
+               COUNT  FQ NEXT DUE       AMOUNT'
+SEL1     DFHMDF POS=(6,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL1     DFHMDF POS=(6,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL2     DFHMDF POS=(7,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL2     DFHMDF POS=(7,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL3     DFHMDF POS=(8,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL3     DFHMDF POS=(8,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL4     DFHMDF POS=(9,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL4     DFHMDF POS=(9,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL5     DFHMDF POS=(10,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL5     DFHMDF POS=(10,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL6     DFHMDF POS=(11,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL6     DFHMDF POS=(11,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL7     DFHMDF POS=(12,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL7     DFHMDF POS=(12,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL8     DFHMDF POS=(13,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL8     DFHMDF POS=(13,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL9     DFHMDF POS=(14,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL9     DFHMDF POS=(14,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL10    DFHMDF POS=(15,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL10    DFHMDF POS=(15,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL11    DFHMDF POS=(16,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL11    DFHMDF POS=(16,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL12    DFHMDF POS=(17,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SOL12    DFHMDF POS=(17,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(19,1),LENGTH=60,ATTRB=(ASKIP,NORM),               X
+               INITIAL='S = A (AMEND)  X (CANCEL)  I (ENQUIRE)    PF5 =X
+                NEW ORDER'
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=49,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=PROCESS PF3=EXIT PF5=NEW PF8=MORE PF12=CFX
+               02'
+*
+SOM02    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='SO02'
+         DFHMDF POS=(1,20),LENGTH=38,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  STANDING ORDER DETAIL'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- DETAIL ------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=6,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='PAYER:'
+PAYER    DFHMDF POS=(3,12),LENGTH=20,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(3,36),LENGTH=6,ATTRB=(ASKIP,NORM),                X
+               INITIAL='SO NO:'
+SOSEQ    DFHMDF POS=(3,43),LENGTH=4,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(3,50),LENGTH=7,ATTRB=(ASKIP,NORM),                X
+               INITIAL='STATUS:'
+SOSTAT   DFHMDF POS=(3,58),LENGTH=12,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(5,1),LENGTH=16,ATTRB=(ASKIP,NORM),                X
+               INITIAL='BENEFICIARY NAME'
+BNAME    DFHMDF POS=(5,22),LENGTH=35,ATTRB=(UNPROT,BRT,IC,FSET),       X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(5,58),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(6,1),LENGTH=16,ATTRB=(ASKIP,NORM),                X
+               INITIAL='BENEFICIARY SORT'
+BSORT    DFHMDF POS=(6,22),LENGTH=6,ATTRB=(UNPROT,NUM,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(6,29),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(7,1),LENGTH=19,ATTRB=(ASKIP,NORM),                X
+               INITIAL='BENEFICIARY ACCOUNT'
+BACCT    DFHMDF POS=(7,22),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(7,31),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(8,1),LENGTH=9,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='REFERENCE'
+BREF     DFHMDF POS=(8,22),LENGTH=18,ATTRB=(UNPROT,NORM,FSET),         X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(8,41),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(10,1),LENGTH=9,ATTRB=(ASKIP,NORM),                X
+               INITIAL='FREQUENCY'
+FREQ     DFHMDF POS=(10,22),LENGTH=2,ATTRB=(UNPROT,NORM,FSET),         X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(10,25),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(10,30),LENGTH=36,ATTRB=(ASKIP,NORM),              X
+               INITIAL='W1 W2 W4 M1 M3 M6 MA'
+         DFHMDF POS=(11,1),LENGTH=18,ATTRB=(ASKIP,NORM),               X
+               INITIAL='FIRST / NEXT DATE'
+FDATE    DFHMDF POS=(11,22),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(11,31),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(11,34),LENGTH=9,ATTRB=(ASKIP,NORM),               X
+               INITIAL='CCYYMMDD'
+         DFHMDF POS=(12,1),LENGTH=12,ATTRB=(ASKIP,NORM),               X
+               INITIAL='FIRST AMOUNT'
+FAMT     DFHMDF POS=(12,22),LENGTH=12,ATTRB=(UNPROT,NORM,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(12,35),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(13,1),LENGTH=14,ATTRB=(ASKIP,NORM),               X
+               INITIAL='REGULAR AMOUNT'
+RAMT     DFHMDF POS=(13,22),LENGTH=12,ATTRB=(UNPROT,NORM,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(13,35),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(14,1),LENGTH=12,ATTRB=(ASKIP,NORM),               X
+               INITIAL='FINAL AMOUNT'
+LAMT     DFHMDF POS=(14,22),LENGTH=12,ATTRB=(UNPROT,NORM,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(14,35),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(15,1),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='FINAL DATE'
+LDATE    DFHMDF POS=(15,22),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(15,31),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(16,1),LENGTH=18,ATTRB=(ASKIP,NORM),               X
+               INITIAL='NUMBER OF PAYMENTS'
+NUMPAY   DFHMDF POS=(16,22),LENGTH=4,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(16,27),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(16,30),LENGTH=24,ATTRB=(ASKIP,NORM),              X
+               INITIAL='9999 = UNTIL FURTHER NOTICE'
+         DFHMDF POS=(18,1),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='LAST PAID:'
+LPAID    DFHMDF POS=(18,12),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(18,25),LENGTH=12,ATTRB=(ASKIP,NORM),              X
+               INITIAL='TOTAL PAID:'
+TPAID    DFHMDF POS=(18,38),LENGTH=14,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(19,1),LENGTH=9,ATTRB=(ASKIP,NORM),                X
+               INITIAL='CREATED:'
+CREATED  DFHMDF POS=(19,12),LENGTH=30,ATTRB=(ASKIP,BRT)
+MODE     DFHMDF POS=(20,1),LENGTH=30,ATTRB=(ASKIP,BRT)
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=39,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=SAVE  PF3=EXIT  PF12=BACK TO LIST'
+*
+         DFHMSD TYPE=FINAL
+         END

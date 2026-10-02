@@ -1,0 +1,48 @@
+)CM ******************************************************************
+)CM SKELETON : RGAML01S
+)CM TITLE    : AML TRANSACTION MONITORING - RERUN WITH NEW PARAMETERS
+)CM BASED ON : MBK.PRD.JCL(RGAML01) - KEEP IN STEP
+)CM CALLED BY: MBKAMLRP (RERUN COMMAND) VIA MBKSUBMT - NEEDS THE
+)CM            OPERATIONS OVERRIDE (CA-7 JOB)
+)CM ------------------------------------------------------------------
+)CM VARIABLES
+)CM   SRULEDSN  RULE PARAMETER MEMBER (MBK.PRD.CNTL(AMLRULES))
+)CM ------------------------------------------------------------------
+)CM SAFE TO RERUN - RGAML010 RAISES ONE ALERT PER ACCOUNT PER RULE
+)CM PER DAY (UNIQUE INDEX ON MBK.AMLALERT), SO ONLY ALERTS NEW UNDER
+)CM THE CHANGED THRESHOLDS ARE ADDED. AM005 LISTS THE PARAMETERS
+)CM USED SO THE MLRO OFFICE CAN EVIDENCE THE RERUN.
+)CM ------------------------------------------------------------------
+)CM 2010-08-16 JNB  ORIGINAL
+)CM 2012-04-23 PDQ  AM005 PARAMETER LISTING
+)CM ******************************************************************
+)SET SDB2 = Y
+)IM MBKJOBC
+//*------------------------------------------------------------------*
+//* RGAML01 RERUN - AML RULES R01-R07 WITH &SRULEDSN
+//*------------------------------------------------------------------*
+//* AM005 - LIST THE RULE PARAMETERS IN FORCE
+//*------------------------------------------------------------------*
+//AM005    EXEC PGM=IEBGENER
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD DUMMY
+//SYSUT1   DD DISP=SHR,DSN=&SRULEDSN
+//SYSUT2   DD SYSOUT=(R,,AML1)
+//*------------------------------------------------------------------*
+//* AM010 - RULES (RGAML010)
+//*------------------------------------------------------------------*
+//AM010    EXEC MBKDB2B
+//STEP.ACCTMAST DD DISP=SHR,DSN=&SHLQ..DDA.ACCTMAST
+//STEP.CIFMAST  DD DISP=SHR,DSN=&SHLQ..CIF.MASTER
+//STEP.RULEPARM DD DISP=SHR,DSN=&SRULEDSN
+//STEP.ALERTS   DD DSN=&SHLQ..AML.ALERTS(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(CYL,(5,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=200,BLKSIZE=0)
+//STEP.REPORT   DD SYSOUT=(R,,AML1),
+//            DCB=(RECFM=FBA,LRECL=133,BLKSIZE=0)
+//STEP.SYSTSIN  DD *
+ DSN SYSTEM(DB2P)
+ RUN PROGRAM(RGAML010) PLAN(RGAML010) LIB('&SHLQ..LOADLIB')
+ END
+/*

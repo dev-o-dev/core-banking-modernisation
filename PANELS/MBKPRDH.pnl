@@ -1,0 +1,46 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRDH                                                */
+/* TITLE    : HELP - PRODUCT PARAMETER CHANGE SETS (PAGE 1)          */
+/* CONTINUED: MBKPRDH2 (FIELD NAMES)                                 */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2009-10-01 AOS  PIR 2009/301 RATE REDUCTIONS                      */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- PRODUCT PARAMETER CHANGE SETS -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++A%change set+is a group of cards for one product, applied together by
++PRMNT010 on the effective date.  If any card fails validation the%whole+
++set is rejected and appears on the PRMNT01 report for Product Control.
++
+]Actions+
++  %A+ Add a new product.  Key the short name; then key every field the new
++      product needs (status, customer type, interest indicators, GL codes).
++      A product that pays interest needs GL-INT-EXPENSE; one that charges
++      interest needs GL-INT-INCOME; every product needs GL-BALANCE-CR.
++  %U+ Update one or more fields.
++  %W+ Withdraw the product (status W, withdraw date = business date).
++  %C+ Close to new business (status N).  Existing accounts unaffected.
++
+]Effective date+
++   Today: applied by the next PRMNT01 run (submitted on approval, or the
++   end of day run).  Future: carried forward run to run until due.
++
+]Cross-checks made by PRMNT010 after applying the set+
++   Credit tier thresholds ascending, tier 1 threshold zero; unarranged rate
++   not below the arranged rate; CHG-NOTIFY-DAYS at least 14; GL codes
++   present.  The dialog checks those it can see in the set itself.
++
+]Four eyes+
++   A second user with approval authority must approve the set (option A).
++   PRMNT010 rejects any card whose requester and approver are the same.
+)PROC
+  &ZCONT = MBKPRDH2
+  &ZUP   = MBKMENUH
+)END

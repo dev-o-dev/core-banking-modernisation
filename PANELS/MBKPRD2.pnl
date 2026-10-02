@@ -1,0 +1,61 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRD2                                                */
+/* TITLE    : PRODUCT PARAMETER CHANGE SET - FIELD CHANGES (TABLE)   */
+/* EXEC     : MBKPRDCH (FIELD_CHANGES) - TABLE PRDFLDS               */
+/*-------------------------------------------------------------------*/
+/* ONE ROW PER 'U' CARD (FORM PC/17 SECTION B):                      */
+/*   FNAME  PCH-FIELD-NAME   (COLS 27-50) PRDPARRC NAME WITHOUT PRD- */
+/*   FOCC   PCH-OCCURRENCE   (COL  51)    TIER / FEE NUMBER          */
+/*   FVAL   PCH-NEW-VALUE    (COLS 52-81)                            */
+/*   FMSG   VALIDATION MESSAGE FROM THE EXEC (OUTPUT)                */
+/* COMMANDS: SAVE  - VALIDATE AND CONTINUE TO CONFIRMATION           */
+/*           MORE  - ADD 12 BLANK ROWS (MAX 59 FIELDS PER SET)       */
+/*           FIELDS- LIST OF FIELD NAMES, TYPES AND CODES            */
+/*           CANCEL- ABANDON THE SET                                 */
+/*           PF3   - BACK TO THE HEADER (ROWS ARE KEPT)              */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2017-08-14 RKS  MESSAGE COLUMN (ERRORS WERE ONE AT A TIME)        */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON)  PAD('.')
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('.')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - CHANGE SET FIELDS -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++Product#PRPROD    +Action#Z+ Effective#PREFF   +  Commands:%SAVE MORE FIELDS
++                                                             %CANCEL+  PF3=back
+%Field name               Occ New value                      Message
+%------------------------ --- ------------------------------ ------------------
+)MODEL ROWS(ALL)
+_FNAME                   _Z+ !FVAL                          @FMSG              +
+)INIT
+  .ZVARS  = '(PRACT FOCC)'
+  .HELP   = MBKPRDH
+  .CURSOR = FNAME
+  IF (&AMT = ' ')
+     &AMT = PAGE
+)PROC
+  &ZCMD = TRUNC(&ZCMD,' ')
+  IF (&ZCMD NE ' ')
+     VER (&ZCMD,LIST,SAVE,MORE,FIELDS,CANCEL)
+  IF (&FOCC NE ' ')
+     VER (&FOCC,NUM)
+     VER (&FOCC,RANGE,0,6)
+  IF (&FNAME NE ' ')
+     IF (&FVAL = ' ')
+        &ZEDSMSG = 'Value required'
+        &ZEDLMSG = 'Key the new value for the field, or blank the field name.'
+        .MSG     = ISRZ001
+        .CURSOR  = FVAL
+  VPUT (AMT) PROFILE
+)HELP
+  FIELD(FNAME) PANEL(MBKPRDH2)
+  FIELD(FOCC)  PANEL(MBKPRDH2)
+  FIELD(FVAL)  PANEL(MBKPRDH2)
+)END

@@ -1,0 +1,34 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKAUD2                                                */
+/* TITLE    : DIALOG AUDIT LOG - ONE ENTRY IN FULL (POP-UP)          */
+/* EXEC     : MBKAUDIT                                               */
+/*-------------------------------------------------------------------*/
+/* 2010-11-29 AOS  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY WINDOW(72,14)
+%Command ===>_ZCMD                                                    +
++
++Date     #AUDT    +   Time#AUTM    +   User#AUUS    +
++Function #AUFN+          Action#AUAC    +
++Key      #AUKY                +
++
++Text:
+#AUT1                                                                  +
+#AUT2                                                                  +
+#AUT3                                                                  +
++
++PF3 returns to the list.
+)INIT
+  &ZWINTTL = 'Audit log entry'
+  .HELP    = MBKMENUH
+  /* THE TEXT IS UP TO 139 CHARACTERS - SPLIT OVER THREE LINES */
+  &AUT1 = TRUNC(&AUTX,70)
+  &AUTR = .TRAIL
+  &AUT2 = TRUNC(&AUTR,70)
+  &AUT3 = .TRAIL
+)PROC
+)END

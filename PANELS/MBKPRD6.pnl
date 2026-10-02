@@ -1,0 +1,35 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRD6                                                */
+/* TITLE    : PRODUCT CHANGE SET - REVIEW CARDS (BROWSE)             */
+/* EXEC     : MBKPRDCH (REVIEW_SET) - TABLE PRDREVW                  */
+/*-------------------------------------------------------------------*/
+/* SHOWS THE CARDS EXACTLY AS THEY WILL BE PASSED TO PRMNT010:       */
+/*   RSEQ  PCH-CARD-SEQ        RACT  PCH-ACTION                      */
+/*   RFLD  PCH-FIELD-NAME      ROCC  PCH-OCCURRENCE (BLANK IF 0)     */
+/*   RVAL  PCH-NEW-VALUE       REFF  PCH-EFFECTIVE-DATE              */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - REVIEW CHANGE SET -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Change ref@SREF        +Product@SPROD     +Keyed by@SREQ    +
++
+%Seq Act Field name               Occ New value                      Eff date
+%--- --- ------------------------ --- ------------------------------ --------
+)MODEL ROWS(ALL)
+#RSEQ#RACT#RFLD                   #ROCC#RVAL                          #REFF    +
+)INIT
+  .HELP = MBKPRDH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+)PROC
+  VPUT (AMT) PROFILE
+)END

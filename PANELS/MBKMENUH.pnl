@@ -1,0 +1,42 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKMENUH                                               */
+/* TITLE    : HELP - MEGABANK OPERATIONS DIALOGS                     */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2013-01-21 PDQ  APPROVAL QUEUE / CUT-OFF RELEASE                  */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- MEGABANK OPERATIONS DIALOGS -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++These dialogs prepare the control cards read by the batch suite.  They
++replace the paper forms (PC/17, CR/11, FO/4) previously keyed by Operations.
++
+]How a card reaches the batch+
++ 1. A user with%key+authority (level K) enters the item.  It is validated
++    against the same rules the batch program uses and saved in the
++    function's pending library <HLQ>.ISPF.PEND.<func>.
++ 2. Where the program needs%four eyes+(product changes, rate changes,
++    charge refunds, suspense write-offs) a%different+user with level A
++    approves it from option%A+.  You can never approve your own item.
++ 3. Approved items are either merged into the batch input straight away
++    (product changes) or%released+at cut-off from option%R+(refunds,
++    suspense, bereavement), or released with the job (rate changes).
++ 4. Every request, approval, rejection, release and submit is written to
++    the audit log <HLQ>.ISPF.AUDITLOG (option%L+).
++
+]Cut-off times+
++    Bereavement 18:45 (CFDEC01 19:00).  Refunds / suspense 21:30.
++    No on-request job may be submitted 21:30-05:30 or on a non-business day.
++
+]Problems+
++    Authority - your team leader raises form SEC/09 to Security Admin.
++    Anything else - Core Systems Support, ServiceNow group MBK-CORE-L2.
+)PROC
+  &ZCONT = MBKMENUH
+)END

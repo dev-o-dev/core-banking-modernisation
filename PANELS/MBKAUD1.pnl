@@ -1,0 +1,56 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKAUD1                                                */
+/* TITLE    : DIALOG AUDIT LOG - BROWSE (NEWEST FIRST)               */
+/* EXEC     : MBKAUDIT (BROWSE) - TABLE MBKAUDT                      */
+/*-------------------------------------------------------------------*/
+/* CHANGING ANY FILTER FIELD SETS AUREFR = Y AND THE EXEC REBUILDS   */
+/* THE TABLE FROM THE LOG.                                           */
+/*-------------------------------------------------------------------*/
+/* 2010-11-29 AOS  ORIGINAL (IA-10-044)                              */
+/* 2014-10-06 PDQ  USER / DATE / ACTION FILTERS                      */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - DIALOG AUDIT LOG -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Filter:  Function_Z  +  User_AUUSER  +  From date_AUDATE  +  Action_AUACT   +
++Entries shown@AUCOUNT+       %S+= show the full entry
++
+%S Date     Time     User     Fun Action   Key                  Text
+%- -------- -------- -------- --- -------- -------------------- ---------------
+)MODEL ROWS(SCAN)
+_Z#AUDT    #AUTM    #AUUS    #AUFN#AUAC    #AUKY                #AUTX          +
+)INIT
+  .ZVARS = '(AUFUNC AUSEL)'
+  .HELP  = MBKMENUH
+  IF (&AMT = ' ')
+     &AMT = CSR
+  &AUSEL  = ' '
+  &AUREFR = N
+  &AUOFN  = &AUFUNC
+  &AUOUS  = &AUUSER
+  &AUODT  = &AUDATE
+  &AUOAC  = &AUACT
+)PROC
+  IF (&AUFUNC NE ' ')
+     VER (&AUFUNC,LIST,PRD,RT,FX,CGR,GLS,BRV,AML,MNU)
+  IF (&AUDATE NE ' ')
+     VER (&AUDATE,PICT,'NNNNNNNN')
+  IF (&AUFUNC NE &AUOFN)
+     &AUREFR = Y
+  IF (&AUUSER NE &AUOUS)
+     &AUREFR = Y
+  IF (&AUDATE NE &AUODT)
+     &AUREFR = Y
+  IF (&AUACT NE &AUOAC)
+     &AUREFR = Y
+  IF (&ZTDSELS NE 0000)
+     VER (&AUSEL,LIST,S)
+  VPUT (AMT) PROFILE
+)END

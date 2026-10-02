@@ -1,0 +1,90 @@
+***********************************************************************
+* MAPSET   : DDMAP3                                                   *
+* TITLE    : DDA - BRANCH TRANSACTION HISTORY                         *
+* PROGRAM  : DDSCRN3   TRANSACTION DD03                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(DDMAP3)    *
+*---------------------------------------------------------------------*
+* 2010-04-12 SAT  ORIGINAL VERSION (HISTORY FROM DB2 VIA DDTXN01)     *
+***********************************************************************
+DDMAP3   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+DDM03    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='DD03'
+         DFHMDF POS=(1,20),LENGTH=36,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  TRANSACTION HISTORY'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- KEY ---------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='SORT CODE:'
+SORTCD   DFHMDF POS=(3,12),LENGTH=6,ATTRB=(UNPROT,BRT,IC,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,19),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,22),LENGTH=8,ATTRB=(ASKIP,NORM),                X
+               INITIAL='ACCOUNT:'
+ACCTNO   DFHMDF POS=(3,31),LENGTH=8,ATTRB=(UNPROT,BRT,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,40),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,43),LENGTH=5,ATTRB=(ASKIP,NORM),                X
+               INITIAL='FROM:'
+FROMDT   DFHMDF POS=(3,49),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,58),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,61),LENGTH=3,ATTRB=(ASKIP,NORM),                X
+               INITIAL='TO:'
+TODT     DFHMDF POS=(3,65),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,74),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(4,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='FILTER D/C:'
+FILTER   DFHMDF POS=(4,12),LENGTH=1,ATTRB=(UNPROT,NORM,FSET)
+         DFHMDF POS=(4,14),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(4,22),LENGTH=8,ATTRB=(ASKIP,NORM),                X
+               INITIAL='PRODUCT:'
+PRODCD   DFHMDF POS=(4,31),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(4,43),LENGTH=7,ATTRB=(ASKIP,NORM),                X
+               INITIAL='LEDGER:'
+LEDGER   DFHMDF POS=(4,51),LENGTH=17,ATTRB=(ASKIP,BRT)
+*        ---- TRANSACTIONS -------------------------------------------
+         DFHMDF POS=(6,1),LENGTH=79,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='DATE       TXN  DETAILS                        X
+                 PAID OUT       PAID IN    BALANCE'
+TXL1     DFHMDF POS=(7,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL2     DFHMDF POS=(8,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL3     DFHMDF POS=(9,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL4     DFHMDF POS=(10,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL5     DFHMDF POS=(11,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL6     DFHMDF POS=(12,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL7     DFHMDF POS=(13,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL8     DFHMDF POS=(14,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL9     DFHMDF POS=(15,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL10    DFHMDF POS=(16,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL11    DFHMDF POS=(17,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL12    DFHMDF POS=(18,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL13    DFHMDF POS=(19,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+TXL14    DFHMDF POS=(20,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(21,1),LENGTH=6,ATTRB=(ASKIP,NORM),                X
+               INITIAL='PAGE:'
+PAGENO   DFHMDF POS=(21,8),LENGTH=3,ATTRB=(ASKIP,BRT)
+MOREIND  DFHMDF POS=(21,14),LENGTH=20,ATTRB=(ASKIP,BRT)
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=50,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=SEARCH PF3=EXIT PF7=FIRST PF8=NEXT PF12=CX
+               F02'
+*
+         DFHMSD TYPE=FINAL
+         END

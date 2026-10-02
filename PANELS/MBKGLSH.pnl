@@ -1,0 +1,39 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKGLSH                                                */
+/* TITLE    : HELP - GL SUSPENSE CLEARING                            */
+/*-------------------------------------------------------------------*/
+/* 2008-06-23 KLM  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- GL SUSPENSE CLEARING -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++Postings the GL feed cannot map (unknown product, missing GL code, out of
++balance batch) are raised as suspense items in MBK.GLSUSP and posted to
++the suspense GL.  Finance Operations investigate them in Oracle GL and
++then tell the mainframe the item is cleared, so that it drops off the
++ageing report.
++
+]Actions+
++  %C+Cleared - a manual journal (MJnnnnnnnn) has moved the amount to the
++      right GL in Oracle.  No approval needed.
++  %W+Write off - the amount is written off to the suspense write-off GL.
++      Needs a second user (four eyes) and is limited to 500.00 by
++      GLSUS010.  Use the WO form reference or the journal number.
++
+]Ageing+
++   0-5 days normal, 6-30 watch, 31-90 escalated to the Finance Controller
++   nightly, over 90 days reported to Internal Audit (GLSUS01 ends RC 4).
++
+]Cut-off+
++   Release from option R before 21:30 for tonight's GLSUS01.
++   If DB2 is unavailable the item cannot be checked - you may still key
++   the instruction; GLSUS010 rejects it overnight if it is wrong.
+)PROC
+  &ZUP = MBKMENUH
+)END

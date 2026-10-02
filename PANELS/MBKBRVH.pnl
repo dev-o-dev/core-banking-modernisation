@@ -1,0 +1,40 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKBRVH                                                */
+/* TITLE    : HELP - BEREAVEMENT INSTRUCTIONS                        */
+/*-------------------------------------------------------------------*/
+/* 2011-02-14 AOS  ORIGINAL                                          */
+/* 2015-06-08 PDQ  SMALL ESTATE 25,000                               */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- BEREAVEMENT INSTRUCTIONS -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++Use this dialog only when the Bereavement Workflow Tool is unavailable or
++cannot handle the case.  Instructions are processed by CFDEC010 at 19:00.
++
+]N - notification of death+
++   CIF marked deceased; every account blocked for debits (credits still
++   accepted); standing orders and direct debits cancelled; loan
++   collections paused 90 days (interest continues unless freeze = Y);
++   letter BRV1 to the notifier.  The bereavement reference is allocated.
+]P - probate / letters of administration+
++   Credit balances paid to the executor (MegaBank account: transfer;
++   other bank: CHAPS keyed by the team) and accounts closed.  Debit
++   balances and loans listed for the claim on the estate.  Without a
++   grant, release on%indemnity+if the estate is under 25,000 - team
++   leader only (they sign the indemnity).
+]X - estate settled+   CIF closed if nothing remains open.
+]R - reversal+         Notification in error.  Team leader only.  Debit
++   blocks lifted, but standing orders and direct debits are%not+
++   reinstated - phone the customer.
++
++Cut-off 18:45.  The CIF number is keyed twice - wrong-customer
++notifications were the main complaint theme in the 2011 review.
+)PROC
+  &ZUP = MBKMENUH
+)END

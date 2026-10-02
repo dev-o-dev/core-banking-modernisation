@@ -1,0 +1,36 @@
+)CM ******************************************************************
+)CM SKELETON : MBKJOBC
+)CM TITLE    : STANDARD JOB CARD FOR JOBS SUBMITTED FROM THE MBKMENU
+)CM            DIALOGS (IMBEDDED BY EVERY DIALOG JOB SKELETON)
+)CM ------------------------------------------------------------------
+)CM VARIABLES (SET BY MBKSUBMT)
+)CM   SJOBNAME  PRODUCTION JOB NAME - RACF JESJOBS PROFILE
+)CM             MBK.ONREQ.* PERMITS DIALOG USERS TO SUBMIT THESE
+)CM   SJDESC    PROGRAMMER NAME FIELD (20 CHARS)
+)CM   SUSER     SUBMITTING USER - IN THE ACCOUNTING FIELD FOR
+)CM             CHARGEBACK AND IN THE AUDIT TRAIL
+)CM   SMSGCLS   X (HELD) / A / H
+)CM   SHOLDTXT  ',TYPRUN=HOLD' OR NULL
+)CM   SNOTTXT   ',NOTIFY=&SYSUID' OR NULL
+)CM   SKEY      DIALOG KEY (CHANGE REF / CURRENCY / GENERATION)
+)CM ------------------------------------------------------------------
+)CM CLASS B IS THE ON-REQUEST BATCH CLASS (2 INITIATORS, NOT DRAINED
+)CM DURING THE ONLINE DAY). SCHENV=DB2P ROUTES DB2 JOBS TO A SYSTEM
+)CM WITH THE DB2P SUBSYSTEM ACTIVE.
+)CM ------------------------------------------------------------------
+)CM 2007-02-12 JNB  ORIGINAL
+)CM 2011-05-09 JNB  TYPRUN=HOLD / NOTIFY FROM THE SUBMIT PANEL
+)CM 2016-01-11 PDQ  SCHENV FOR THE DB2 DATA SHARING MOVE
+)CM ******************************************************************
+)DEFAULT )&?!<|>
+//&SJOBNAME JOB (MBK,ISP,&SUSER),'&SJDESC',
+//             CLASS=B,MSGCLASS=&SMSGCLS,REGION=0M&SHOLDTXT&SNOTTXT
+)SEL &SDB2 = Y
+//             SCHENV=DB2P
+)ENDSEL
+//*------------------------------------------------------------------*
+//* SUBMITTED FROM ISPF DIALOG MBKMENU BY &SUSER
+//* ON &SDATE AT &STIME FOR &SKEY
+//* THIS JOB IS RECORDED IN &SHLQ..ISPF.AUDITLOG
+//*------------------------------------------------------------------*
+//         JCLLIB ORDER=(&SHLQ..PROCLIB)

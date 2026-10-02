@@ -1,0 +1,43 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKCGR2                                                */
+/* TITLE    : CHARGE REFUNDS - APPROVAL LIST                         */
+/* EXEC     : MBKCGREF (APPROVE_LIST) - TABLE CGRAPPR                */
+/*-------------------------------------------------------------------*/
+/* LINE COMMANDS  A APPROVE   R REJECT                               */
+/* AL2 = 'L2' WHERE A LEVEL 2 APPROVER IS NEEDED (OVER 250.00 OR     */
+/* REMAINING BALANCE). APPROVED ITEMS WAIT FOR THE CUT-OFF RELEASE.  */
+/*-------------------------------------------------------------------*/
+/* 2008-04-07 JNB  ORIGINAL                                          */
+/* 2013-01-21 PDQ  FROM THE COMMON APPROVAL QUEUE                    */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED)   CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - CHARGE REFUNDS FOR APPROVAL -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Line commands:%A+approve  %R+reject                      Pending@ACOUNT+
++Rows marked%L2+need a team leader.  Check the case notes before approving.
++
+%S Ref          Keyed by Sort   Account  Type      Amount Rsn  Case ref     L2
+%- ------------ -------- ------ -------- ---- ----------- ---- ------------ --
+)MODEL ROWS(SCAN)
+_Z#AREF        #AUSER   #ASORT #AACCT   #Z   @AAMT       +#ARSN#ACASE       $Z +
++                       #ANARR                              +
+)INIT
+  .ZVARS = '(ASEL ATYPE AL2)'
+  .HELP  = MBKCGRH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  &ASEL = ' '
+)PROC
+  IF (&ZTDSELS NE 0000)
+     VER (&ASEL,LIST,A,R)
+  VPUT (AMT) PROFILE
+)END

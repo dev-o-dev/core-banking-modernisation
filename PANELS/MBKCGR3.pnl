@@ -1,0 +1,36 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKCGR3                                                */
+/* TITLE    : CHARGE REFUNDS - CUT-OFF RELEASE CONFIRMATION          */
+/* EXEC     : MBKCGREF (RELEASE)                                     */
+/*-------------------------------------------------------------------*/
+/* RLMERGE = Y WHEN A GENERATION WAS ALREADY RELEASED TODAY (RLLAST  */
+/* = BUSINESS DATE) - THE NEW GENERATION CONTAINS BOTH.              */
+/*-------------------------------------------------------------------*/
+/* 2013-01-21 PDQ  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY WINDOW(64,14)
+%Command ===>_ZCMD                                              +
++
++Approved refunds to release#RLCOUNT+
++Total (excluding balance refunds)#RLTOTAL       +
++Last release business date#RLLAST  +
++Merge with today's generation#Z+
++
++The refunds are written to MBK.PRD.CHG.REFUNDS.APPROVED(+1)
++for tonight's CGREF01 (MBKEOD).  Postings appear on the
++customer's account tomorrow morning.
++
++Release now%===>_Z+ (Y/N)
+)INIT
+  &ZWINTTL = 'Release charge refunds'
+  .ZVARS   = '(RLMERGE RLCONF)'
+  .CURSOR  = RLCONF
+  .HELP    = MBKCGRH
+)PROC
+  VER (&RLCONF,NB,LIST,Y,N)
+)END

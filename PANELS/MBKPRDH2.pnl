@@ -1,0 +1,42 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRDH2                                               */
+/* TITLE    : HELP - PRODUCT PARAMETER CHANGE SETS (PAGE 2 - FIELDS) */
+/*-------------------------------------------------------------------*/
+/* KEEP IN STEP WITH PRMNT010 WS-FIELD-VALUES AND MBKPRDCH           */
+/* LOAD_FIELD_TABLE.                                                 */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2008-09-15 JNB  DORMANCY FIELDS                                   */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- CHANGE SET FIELD NAMES -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++Field names are the PRDPARRC names without%PRD-+.  Enter%FIELDS+on the
++field table for the full list.  Occurrence (Occ) is only keyed for:
++   %CR-TIER-THRESHOLD+and%CR-TIER-RATE+ - tier 1 to 5
++
+]Value formats+
++  %Rate  +percent per annum, up to 4 decimals, 0 - 99.9999   e.g.  3.2500
++  %Amount+pounds and pence, up to 2 decimals, no sign         e.g. 1500.00
++  %Number+whole number                                        e.g. 14
++  %Code  +one character from the list shown by FIELDS         e.g. Y
++  %Text  +up to the field length (GL codes upper case)
++
+]Common code lists+
++   STATUS A N W     CUST-TYPE P B A     TIER-METHOD W(hole) B(anded)
++   CR-CAP-FREQ M Q H A T     DR-CAP-FREQ M Q     DEFAULT-STMT-CYCLE M Q A
++   indicator fields (...-IND, KYC-REQUIRED) Y N
++
+]Fields that are NOT maintained here+
++   Transaction fee table, SWIFT / CHAPS / stopped SO / returned DD fees,
++   card fees, account number range - raise a CR with Core Systems.
++   Statement template - Customer Communications team.
+)PROC
+  &ZUP = MBKPRDH
+)END

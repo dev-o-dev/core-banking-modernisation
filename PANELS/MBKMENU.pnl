@@ -1,0 +1,67 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKMENU                                                */
+/* TITLE    : MEGABANK OPERATIONS DIALOGS - PRIMARY OPTION MENU      */
+/* EXEC     : MBKMENU (DISPLAYED IN A LOOP - NOT A SELECTION MENU,   */
+/*            SO THE EXEC CAN CHECK AUTHORITY BEFORE EACH OPTION)    */
+/*-------------------------------------------------------------------*/
+/* MNF1-MNF7 ARE '*' FOR OPTIONS THE USER IS NOT AUTHORISED FOR.     */
+/* MNPTXT SHOWS THE APPROVAL QUEUE COUNT FOR APPROVERS.              */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2013-01-21 PDQ  OPTIONS A AND R                                   */
+/* 2014-10-06 PDQ  ENVIRONMENT IN THE TITLE (UAT SCREENS WERE BEING  */
+/*                 MISTAKEN FOR PRODUCTION)                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED)   CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK PLC - OPERATIONS DIALOGS (@MBKENV+%) -/-/-
+%Option ===>_ZCMD                                                             +
++
++   User    #MNUSER  +                  Business date#MNBDATE   +
++   Time    #MNTIME+                    Functions    #MNFUNCS                 +
++
+%   1 #MNF1+Product parameter change set   +(PRMNT01  - Product Control)
+%   2 #MNF2+Interest rate change           +(INRAT01  - Product Control)
+%   3 #MNF3+FX currency set-up / margins   +(FXMNT01  - Treasury Ops)
+%   4 #MNF4+Charge refund request          +(CGREF01  - Customer Relations)
+%   5 #MNF5+GL suspense clearing           +(GLSUS01  - Finance Ops)
+%   6 #MNF6+Bereavement instruction        +(CFDEC01  - Bereavement Team)
+%   7 #MNF7+AML rule parameters            +(RGAML01  - MLRO Office)
++
+%   A   +Approval queue                  +(items keyed by other users)
+%   R   +Cut-off release                 +(CGR / GLS / BRV to batch)
+%   L   +Audit log                       +(dialog actions)
+%   T   +Tutorial
+%   X   +Exit
++
+$MNPTXT                                                                      +
++
++  Options marked%*+are not in your authority profile (form SEC/09).
++  Add%.RELEASE+or%.LIST+to an option for a sub-function, e.g.%2.RELEASE+
++  or%6.LIST+.  Every action taken is recorded in the dialog audit log.
+)INIT
+  .HELP   = MBKMENUH
+  .CURSOR = ZCMD
+  &ZCMD   = ' '
+  &MBKENV = TRUNC(&MBKHLQ,'.')
+  &MBKENV = .TRAIL
+  IF (&MBKENV = ' ')
+     &MBKENV = PRD
+  IF (&MBKENV NE PRD)
+     .ATTR(MBKENV) = 'COLOR(RED) HILITE(REVERSE)'
+)REINIT
+  REFRESH(MNPTXT MNTIME)
+)PROC
+  &ZCMD = TRUNC(&ZCMD,' ')
+  &OPT  = TRUNC(&ZCMD,'.')
+  VER (&OPT,LIST,1,2,3,4,5,6,7,A,R,L,T,X,MSG=ISRU000)
+)HELP
+  FIELD(ZCMD) PANEL(MBKMENUH)
+)END

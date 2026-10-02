@@ -1,0 +1,73 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKGLS1                                                */
+/* TITLE    : GL SUSPENSE - CLEARING / WRITE-OFF INSTRUCTION         */
+/* EXEC     : MBKGLSUS (NEW_INSTRUCTION)                             */
+/* BATCH    : GLSUS010 VIA GLSUS01 - DD CLEARIN (FB 120)             */
+/*-------------------------------------------------------------------*/
+/*   GSID   CLI-SUSP-ID      (1-9)     GSACT  CLI-ACTION (10) C / W  */
+/*   GSREF  CLI-CLEARING-REF (11-26)   GSNOTE CLI-NOTES  (43-102)    */
+/* USER (27-34) IS THE TSO USER. APPROVER (35-42) FOR WRITE-OFFS.    */
+/* GIxxxx FIELDS ARE THE MBK.GLSUSP ROW FETCHED BY THE EXEC (OUTPUT).*/
+/* THE FIRST ENTER AFTER A NEW ID SHOWS THE ITEM; THE SECOND SAVES.  */
+/*-------------------------------------------------------------------*/
+/* 2008-06-23 KLM  ORIGINAL                                          */
+/* 2016-09-19 PDQ  ITEM DETAILS FROM DB2 (IA-16-022)                 */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON)  PAD('_')
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('_')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED)   CAPS(OFF) HILITE(REVERSE)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - GL SUSPENSE CLEARING -/-/-
+%Command ===>_ZCMD                                                             +
++
++   Suspense ID      %===>_GSID     +
++   Action           %===>_Z+   %C+cleared by journal  %W+write off (max 500)
++   Clearing ref     %===>_GSREF           +  (Oracle MJ... or WO... ref)
++   Notes  %===>!GSNOTE                                                      +
++
+%   Suspense item (MBK.GLSUSP)+
++   Raised           #GIRDATE   +   Age (days)  @GIAGE+
++   Source program   #GISRC   +     Suspense GL #GIGL      +
++   Product          #GIPROD    +   Txn code    #GITXN+  Dr/Cr#Z+
++   Amount           @GIAMT             +   Reason#GIRSN+
++   Status           @Z+    (O open  C cleared  W written off)
+$GIWARN                                         +
++
++   Clear an item (C) once the matching manual journal is posted in
++   Oracle GL - quote the journal number.  Write-offs (W) need a second
++   user's approval and are limited to%500.00+; above that the Finance
++   Controller writes off in Oracle and you clear (C) with that journal.
++   Items over 30 days are escalated nightly; over 90 days the job ends
++   RC 4 for Internal Audit (IA-08-017).
++
++   %ENTER+look up / save     %PF3+end
+)INIT
+  .ZVARS  = '(GSACT GIDRCR GISTAT)'
+  .HELP   = MBKGLSH
+  .CURSOR = GSID
+  IF (&GSACT = ' ')
+     &GSACT = C
+)PROC
+  VER (&GSID,NB,NUM)
+  VER (&GSID,LEN,'<=',9)
+  VER (&GSACT,NB,LIST,C,W)
+  IF (&GIRDATE NE ' ')
+     VER (&GSREF,NB)
+     VER (&GSNOTE,NB)
+  IF (&GSACT = W)
+     IF (&GISTAT NE ' ')
+        IF (&GISTAT NE O)
+           &ZEDSMSG = 'Item not open'
+           &ZEDLMSG = 'Only open items can be written off.'
+           .MSG     = ISRZ001
+           .CURSOR  = GSID
+)HELP
+  FIELD(GSACT) PANEL(MBKGLSH)
+  FIELD(GSREF) PANEL(MBKGLSH)
+)END

@@ -1,0 +1,55 @@
+)CM ******************************************************************
+)CM SKELETON : CGREF01S
+)CM TITLE    : CHARGE REFUNDS - RERUN OUTSIDE CA-7 (OPERATIONS ONLY)
+)CM BASED ON : MBK.PRD.JCL(CGREF01) - KEEP IN STEP
+)CM CALLED BY: MBKSUBMT (ADM LEVEL R OVERRIDE REQUIRED)
+)CM ------------------------------------------------------------------
+)CM CGREF01 NORMALLY RUNS IN MBKEOD AFTER CGCHG01. THIS SKELETON IS
+)CM FOR A RERUN AFTER A FAILURE, WHEN CA-7 CANNOT BE USED (E.G. THE
+)CM NETWORK HAS BEEN FORCE-COMPLETED). REFPOST IS DISP=MOD ON THE
+)CM POSTING FEED - DO NOT RERUN IF CR010 COMPLETED, OR THE REFUNDS
+)CM ARE POSTED TWICE. CR005 CHECKS THE FEED IS EMPTY OF CGREF010
+)CM RECORDS FOR TODAY BEFORE ALLOWING CR010 TO RUN.
+)CM ------------------------------------------------------------------
+)CM 2013-01-21 PDQ  ORIGINAL
+)CM ******************************************************************
+)SET SDB2 = Y
+)IM MBKJOBC
+//*------------------------------------------------------------------*
+//* CGREF01 RERUN - CHARGE REFUNDS (DUAL AUTHORISED)
+//*------------------------------------------------------------------*
+//* CR005 - STOP IF TODAY'S REFUNDS ARE ALREADY ON THE POSTING FEED
+//*         (DFSORT COUNT: RC 4 = RECORDS FOUND -> CR010 BYPASSED)
+//*------------------------------------------------------------------*
+//CR005    EXEC PGM=ICETOOL
+//TOOLMSG  DD SYSOUT=*
+//DFSMSG   DD SYSOUT=*
+//IN       DD DISP=SHR,DSN=&SHLQ..PST.FEED.REFPOST
+//TOOLIN   DD *
+  COUNT FROM(IN) USING(CTL1) NOTEMPTY RC4
+/*
+//CTL1CNTL DD *
+  INCLUDE COND=(1,8,CH,EQ,C'CGREF010')
+/*
+//*------------------------------------------------------------------*
+//* CR010 - REFUNDS (CGREF010)
+//*------------------------------------------------------------------*
+//CR010    EXEC MBKDB2B,COND=(0,LT,CR005)
+//STEP.REFUNDIN DD DISP=SHR,DSN=&SHLQ..CHG.REFUNDS.APPROVED(0)
+//STEP.PRDPARM  DD DISP=SHR,DSN=&SHLQ..PRD.PARMS
+//STEP.ACCTMAST DD DISP=SHR,DSN=&SHLQ..DDA.ACCTMAST
+//STEP.REFPOST  DD DSN=&SHLQ..PST.FEED.REFPOST,
+//            DISP=(MOD,CATLG,CATLG),UNIT=SYSDA,
+//            SPACE=(CYL,(2,2),RLSE),
+//            DCB=(RECFM=FB,LRECL=200,BLKSIZE=0)
+//STEP.GLJNL    DD DSN=&SHLQ..GL.JOURNAL.CHRF(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(CYL,(5,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=250,BLKSIZE=0)
+//STEP.REPORT   DD SYSOUT=(R,,CGR1),
+//            DCB=(RECFM=FBA,LRECL=133,BLKSIZE=0)
+//STEP.SYSTSIN  DD *
+ DSN SYSTEM(DB2P)
+ RUN PROGRAM(CGREF010) PLAN(CGREF010) LIB('&SHLQ..LOADLIB')
+ END
+/*

@@ -1,0 +1,36 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKBRV3                                                */
+/* TITLE    : BEREAVEMENT - RELEASE TO CFDEC01                       */
+/* EXEC     : MBKBRV (RELEASE)                                       */
+/*-------------------------------------------------------------------*/
+/* RLMERGE = Y WHEN TODAY'S GENERATION ALREADY EXISTS (OUR EARLIER   */
+/* RELEASE OR THE WORKFLOW TOOL'S 18:30 FEED) - IT IS MERGED.        */
+/*-------------------------------------------------------------------*/
+/* 2013-01-21 PDQ  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY WINDOW(64,15)
+%Command ===>_ZCMD                                              +
++
++Instructions to release#RLCOUNT+
++   notifications (N)#RLN  +  probate (P)#RLP  +
++   settled (X)      #RLX  +  reversal (R)#RLR +
++Merge with today's generation#Z+
++
++Written to MBK.PRD.CIF.BEREAVE.IN(+1) for CFDEC01 at 19:00.
++Pay-outs to other banks print on the PAYOUT report for the
++team to key as CHAPS tomorrow.
++
++Release now%===>_Z+ (Y/N)
+)INIT
+  &ZWINTTL = 'Release bereavement instructions'
+  .ZVARS   = '(RLMERGE RLCONF)'
+  .CURSOR  = RLCONF
+  .HELP    = MBKBRVH
+)PROC
+  VER (&RLCONF,NB,LIST,Y,N)
+)END

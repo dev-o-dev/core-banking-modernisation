@@ -1,0 +1,94 @@
+***********************************************************************
+* MAPSET   : CFMAPS                                                   *
+* TITLE    : CIF - BRANCH CUSTOMER ENQUIRY SCREEN                     *
+* PROGRAM  : CFSCRN1   TRANSACTION CF01                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(CFMAPS)    *
+*---------------------------------------------------------------------*
+* 1996-08-02 PDK  ORIGINAL VERSION                                    *
+* 2003-05-09 SAT  KYC STATUS AND RISK RATING                          *
+***********************************************************************
+CFMAPS   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+CFM01    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='CF01'
+         DFHMDF POS=(1,20),LENGTH=38,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  CUSTOMER ENQUIRY (CIF)'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*
+*        ---- KEY ---------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=11,ATTRB=(ASKIP,NORM),                X
+               INITIAL='CIF NUMBER:'
+CIFNO    DFHMDF POS=(3,13),LENGTH=12,ATTRB=(UNPROT,BRT,IC,FSET),       X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,26),LENGTH=1,ATTRB=ASKIP
+*
+*        ---- CUSTOMER DETAILS --------------------------------------
+         DFHMDF POS=(5,1),LENGTH=5,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='NAME:'
+CUSTNM   DFHMDF POS=(5,13),LENGTH=60,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(6,1),LENGTH=4,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='DOB:'
+DOB      DFHMDF POS=(6,13),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(6,30),LENGTH=5,ATTRB=(ASKIP,NORM),                X
+               INITIAL='NINO:'
+NINO     DFHMDF POS=(6,36),LENGTH=13,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(7,1),LENGTH=8,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='ADDRESS:'
+ADDR1    DFHMDF POS=(7,13),LENGTH=60,ATTRB=(ASKIP,BRT)
+ADDR2    DFHMDF POS=(8,13),LENGTH=60,ATTRB=(ASKIP,BRT)
+TOWN     DFHMDF POS=(9,13),LENGTH=40,ATTRB=(ASKIP,BRT)
+PCODE    DFHMDF POS=(9,55),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(10,1),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='HOME TEL:'
+HTEL     DFHMDF POS=(10,13),LENGTH=20,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(10,36),LENGTH=7,ATTRB=(ASKIP,NORM),               X
+               INITIAL='MOBILE:'
+MTEL     DFHMDF POS=(10,44),LENGTH=20,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(11,1),LENGTH=6,ATTRB=(ASKIP,NORM),                X
+               INITIAL='EMAIL:'
+EMAIL    DFHMDF POS=(11,13),LENGTH=60,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(12,1),LENGTH=7,ATTRB=(ASKIP,NORM),                X
+               INITIAL='STATUS:'
+CSTAT    DFHMDF POS=(12,13),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(12,25),LENGTH=4,ATTRB=(ASKIP,NORM),               X
+               INITIAL='KYC:'
+KYC      DFHMDF POS=(12,30),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(12,42),LENGTH=5,ATTRB=(ASKIP,NORM),               X
+               INITIAL='RISK:'
+RISK     DFHMDF POS=(12,48),LENGTH=6,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(12,56),LENGTH=8,ATTRB=(ASKIP,NORM),               X
+               INITIAL='SEGMENT:'
+SEGMT    DFHMDF POS=(12,65),LENGTH=10,ATTRB=(ASKIP,BRT)
+*
+*        ---- ACCOUNTS ----------------------------------------------
+         DFHMDF POS=(14,1),LENGTH=79,ATTRB=(ASKIP,BRT),                X
+               INITIAL='SORT CD  ACCOUNT  TYPE PRODUCT    S        LEDGX
+               ER BALANCE          AVAILABLE'
+ACCL1    DFHMDF POS=(15,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+ACCL2    DFHMDF POS=(16,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+ACCL3    DFHMDF POS=(17,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+ACCL4    DFHMDF POS=(18,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+ACCL5    DFHMDF POS=(19,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+ACCL6    DFHMDF POS=(20,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+*
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=40,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=ENQUIRE  PF3=EXIT  PF12=CLEAR'
+*
+         DFHMSD TYPE=FINAL
+         END

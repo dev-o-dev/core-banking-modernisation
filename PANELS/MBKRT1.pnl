@@ -1,0 +1,92 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKRT1                                                 */
+/* TITLE    : INTEREST RATE CHANGE - ENTRY                           */
+/* EXEC     : MBKRTCH (KEY_CHANGES)                                  */
+/* BATCH    : INRAT010 VIA INRAT01 - COPYBOOK RTCHGREC               */
+/*-------------------------------------------------------------------*/
+/*   RTPROD   RTC-PROD-CD        RTEFF   RTC-EFFECTIVE-DATE          */
+/*   RTTYPE   RTC-RATE-TYPE      RTTIER  RTC-TIER (TYPE C ONLY)      */
+/*   RTNEW    RTC-NEW-RATE (PACKED BY THE EXEC)                      */
+/*   RTCUR    CURRENT RATE - OPTIONAL, ONLY FOR THE NOTICE WARNING   */
+/*            (INRAT010 TAKES THE OLD RATE FROM PRDPARM)             */
+/*   RTRSN    RTC-REASON-CD      RTBASE  RTC-BASE-RATE-IND           */
+/*   RTWARN   NOTICE PERIOD WARNING (OUTPUT)  RTACK  Y TO SAVE ANYWAY*/
+/* EFFECTIVE DATE, REASON AND BASE IND ARE KEPT IN THE PROFILE SO A  */
+/* BASE RATE CHANGE CAN BE KEYED FOR MANY PRODUCTS QUICKLY.          */
+/*-------------------------------------------------------------------*/
+/* 2004-03-15 SAT  ORIGINAL (CLIST)                                  */
+/* 2008-10-08 AOS  BASE RATE INDICATOR                               */
+/* 2010-04-12 AOS  REXX VERSION                                      */
+/* 2014-06-02 PDQ  NOTICE PERIOD WARNING                             */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED)   CAPS(OFF) HILITE(BLINK)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - INTEREST RATE CHANGE -/-/-
+%Command ===>_ZCMD                                                             +
++                                                    Business date#RTBDATE +
++   Product code     %===>_RTPROD    +
++   Effective date   %===>_RTEFF   +   (CCYYMMDD)
++   Rate type        %===>_Z+          %C+credit tier  %B+bonus
++                                      %A+arranged OD  %U+unarranged OD
++   Tier             %===>_Z+          (1-5, credit tier only)
++   New rate % p.a.  %===>_RTNEW   +   (e.g. 2.7500)
++   Current rate     %===>_RTCUR   +   (optional - for the notice check)
++   Reason code      %===>_RTRSN+      %BOER+Bank Rate   %MKTR+market
++                                      %PRDR+product review  %CMPT+competitor
++                                      %CORR+correction
++   Base rate tracker%===>_Z+          (Y = applies without notice)
++
+$RTWARN                                                                 +
++   Acknowledge      %===>_Z+          (Y to save despite the warning)
++
++   Adverse changes (lower savings rate, higher overdraft rate) need%14+
++   days notice (BCOBS 4) unless the product tracks Bank Rate.  INRAT010
++   produces the customer notices when the change is announced.
++
++   %ENTER+saves this change and clears the product for the next one.
++   %PF3+  ends keying.  Saved changes wait for a second user to approve.
+)INIT
+  .ZVARS  = '(RTTYPE RTTIER RTBASE RTACK)'
+  .HELP   = MBKRTH
+  .CURSOR = RTPROD
+  IF (&RTBASE = ' ')
+     &RTBASE = N
+  IF (&RTWARN = ' ')
+     .ATTR(RTACK) = 'TYPE(OUTPUT) INTENS(NON)'
+)PROC
+  VER (&RTPROD,NB,INCLUDE,ALPHA,NUM)
+  VER (&RTEFF,NB,PICT,'NNNNNNNN')
+  VER (&RTTYPE,NB,LIST,C,B,A,U)
+  IF (&RTTYPE = C)
+     VER (&RTTIER,NB,RANGE,1,5)
+  IF (&RTTYPE NE C)
+     IF (&RTTIER NE ' ')
+        IF (&RTTIER NE 0)
+           &ZEDSMSG = 'Tier not used'
+           &ZEDLMSG = 'A tier is only keyed for rate type C (credit tier).'
+           .MSG     = ISRZ001
+           .CURSOR  = RTTIER
+  VER (&RTNEW,NB,ENUM)
+  IF (&RTCUR NE ' ')
+     VER (&RTCUR,ENUM)
+  VER (&RTRSN,NB,LIST,BOER,MKTR,PRDR,CMPT,CORR,NPRD)
+  VER (&RTBASE,NB,LIST,Y,N)
+  IF (&RTBASE = Y)
+     IF (&RTRSN NE BOER)
+        &ZEDSMSG = 'Reason must be BOER'
+        &ZEDLMSG = 'Base rate tracker changes must use reason BOER.'
+        .MSG     = ISRZ001
+        .CURSOR  = RTRSN
+  IF (&RTACK NE ' ')
+     VER (&RTACK,LIST,Y,N)
+)HELP
+  FIELD(RTTYPE) PANEL(MBKRTH)
+  FIELD(RTRSN)  PANEL(MBKRTH)
+  FIELD(RTBASE) PANEL(MBKRTH)
+)END

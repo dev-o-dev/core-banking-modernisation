@@ -1,0 +1,52 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKAML2                                                */
+/* TITLE    : AML RULE PARAMETERS - CONFIRM CHANGE                   */
+/* EXEC     : MBKAMLRP (SAVE_CHANGES)                                */
+/*-------------------------------------------------------------------*/
+/* AMREF    FINANCIAL CRIME COMMITTEE MINUTE / MLRO DECISION REF     */
+/* AMREASON WHY - WRITTEN TO THE MEMBER AND THE AUDIT LOG            */
+/* AMRISK   RULES SWITCHED OFF (-OFF) OR RAISED OVER 150% OF THE     */
+/*          DEFAULT (-THR) - NEEDS AMCONF2 = Y AS WELL               */
+/*-------------------------------------------------------------------*/
+/* 2009-09-14 AOS  ORIGINAL                                          */
+/* 2017-06-26 RKS  DECISION REF MANDATORY (MLR 2017)                 */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON)  PAD('_')
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED)   CAPS(OFF) HILITE(REVERSE)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - CONFIRM AML RULE CHANGE -/-/-
+%Command ===>_ZCMD                                                             +
++
++   Rules changed     #AMCHG+
++
++   Decision ref     %===>_AMREF               +  (FCC minute or MLRO-yyyy-nnn)
++   Reason           %===>!AMREASON                                         +
++
+$AMRISK                                                                 +
++
++   The rules apply from tonight's RGAML01.  The previous member is kept
++   as AMLRPREV and every change is in the dialog audit log.
++
++   Save the new parameters      %===>_Z+  (Y/N)
++   Confirm high-risk change     %===>_Z+  (Y - needed when a rule is
++                                          switched off or raised >150%)
+)INIT
+  .ZVARS  = '(AMCONF AMCONF2)'
+  .CURSOR = AMREF
+  .HELP   = MBKAMLH
+  IF (&AMRISK = ' ')
+     .ATTR(AMCONF2) = 'TYPE(OUTPUT) INTENS(NON)'
+  IF (&AMRISK NE ' ')
+     &AMRISK = 'HIGH RISK: &AMRISK'
+)PROC
+  VER (&AMREF,NB)
+  VER (&AMREASON,NB)
+  VER (&AMCONF,NB,LIST,Y,N)
+  IF (&AMCONF2 NE ' ')
+     VER (&AMCONF2,LIST,Y,N)
+)END

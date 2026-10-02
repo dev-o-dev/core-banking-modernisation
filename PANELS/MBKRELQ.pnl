@@ -1,0 +1,40 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKRELQ                                                */
+/* TITLE    : CUT-OFF RELEASE - APPROVED ITEMS NOT YET IN BATCH      */
+/* EXEC     : MBKMENU (RELEASE_QUEUE) - TABLE MBKRELQ                */
+/*-------------------------------------------------------------------*/
+/* 2013-01-21 PDQ  ORIGINAL                                          */
+/* 2015-11-30 PDQ  CUT-OFF TIMES SHOWN (BRV RELEASED AT 19:05 -      */
+/*                 MISSED CFDEC01, INC 2015/1187)                    */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+  $ TYPE(TEXT)   INTENS(HIGH) COLOR(RED)   SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - CUT-OFF RELEASE -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Select a function with%S+to write its approved items to tonight's batch
++input generation.  A second release on the same business day is merged.
++
+$  Cut-offs:  Bereavement 18:45     Refunds / Suspense 21:30
++
+%S Func Description                     Ready  Batch job
+%- ---- ------------------------------- -----  --------
+)MODEL ROWS(SCAN)
+_Z+#RQFUNC#RQDESC                         +@RQCOUNT+ #RQJOB   +
+)INIT
+  .ZVARS = '(RQSEL)'
+  .HELP  = MBKMENUH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  &RQSEL = ' '
+)PROC
+  IF (&ZTDSELS NE 0000)
+     VER (&RQSEL,LIST,S)
+  VPUT (AMT) PROFILE
+)END

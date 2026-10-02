@@ -1,0 +1,73 @@
+)CM ******************************************************************
+)CM SKELETON : FXMNT01S
+)CM TITLE    : FX RATE TABLE - APPLY ONE CURRENCY RECORD FROM FXMNT
+)CM CALLED BY: FXMNT (CONFIRM_AND_SUBMIT) VIA MBKSUBMT
+)CM ------------------------------------------------------------------
+)CM VARIABLES
+)CM   SSTAGE    ONE-RECORD STAGING FILE (MBK.PRD.FX.MAINT.<USERID>)
+)CM   SCCY      CURRENCY CODE
+)CM   SFXDSN    FX RATE TABLE KSDS (MBK.PRD.FX.RATES)
+)CM ------------------------------------------------------------------
+)CM FX005 BACKS UP THE CURRENT RECORD (BEFORE IMAGE FOR TREASURY'S
+)CM FILE COPY AND FOR BACK-OUT: REPRO THE BACKUP WITH REPLACE).
+)CM FX010 REPLACES / ADDS THE RECORD. VSAM SHAREOPTIONS(2 3) - CICS
+)CM HAS FXRATES OPEN FOR READ ONLY, SO THE BATCH UPDATE IS ALLOWED;
+)CM THE RECORD IS REPLACED WHOLE.
+)CM FX020 PRINTS THE NEW RECORD. FX030 TELLS CICS TO DROP ANY
+)CM CACHED RATE (FXSVC01 KEEPS A 60-SECOND CACHE) VIA THE MODIFY
+)CM COMMAND - ONLY IF FX010 WORKED.
+)CM ------------------------------------------------------------------
+)CM 2011-05-09 JNB  ORIGINAL
+)CM 2014-02-17 PDQ  BEFORE-IMAGE BACKUP (FX005)
+)CM 2019-09-30 RKS  FX030 CACHE REFRESH
+)CM ******************************************************************
+)SET SDB2 = N
+)IM MBKJOBC
+//*------------------------------------------------------------------*
+//* FXMNT01 - FX CURRENCY MAINTENANCE FOR &SCCY
+//*------------------------------------------------------------------*
+//* FX005 - BEFORE IMAGE OF &SCCY (EMPTY FOR A NEW CURRENCY - RC 4)
+//*------------------------------------------------------------------*
+//FX005    EXEC PGM=IDCAMS
+//SYSPRINT DD SYSOUT=*
+//FXRATES  DD DISP=SHR,DSN=&SFXDSN
+//BACKUP   DD DSN=&SHLQ..FX.MAINT.BACKUP(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(TRK,(1,1),RLSE),
+//            DCB=(RECFM=FB,LRECL=150,BLKSIZE=0)
+//SYSIN    DD *
+  REPRO INFILE(FXRATES) OUTFILE(BACKUP) -
+        FROMKEY(&SCCY) TOKEY(&SCCY)
+  IF LASTCC = 4 THEN SET MAXCC = 0
+/*
+//*------------------------------------------------------------------*
+//* FX010 - REPLACE / ADD THE RECORD
+//*------------------------------------------------------------------*
+//FX010    EXEC PGM=IDCAMS,COND=(4,LT,FX005)
+//SYSPRINT DD SYSOUT=*
+//STAGE    DD DISP=SHR,DSN=&SSTAGE
+//FXRATES  DD DISP=SHR,DSN=&SFXDSN
+//SYSIN    DD *
+  REPRO INFILE(STAGE) OUTFILE(FXRATES) REPLACE
+/*
+//*------------------------------------------------------------------*
+//* FX020 - PRINT THE NEW RECORD FOR TREASURY OPERATIONS
+//*------------------------------------------------------------------*
+//FX020    EXEC PGM=IDCAMS,COND=(0,LT,FX010)
+//SYSPRINT DD SYSOUT=(R,,FXR1)
+//FXRATES  DD DISP=SHR,DSN=&SFXDSN
+//SYSIN    DD *
+  PRINT INFILE(FXRATES) FROMKEY(&SCCY) TOKEY(&SCCY) DUMP
+/*
+//*------------------------------------------------------------------*
+//* FX030 - CICS RATE CACHE REFRESH (TRANSACTION FXRC VIA MODIFY)
+//*------------------------------------------------------------------*
+//FX030    EXEC PGM=IKJEFT01,COND=(0,LT,FX010)
+//SYSTSPRT DD SYSOUT=*
+//SYSTSIN  DD *
+ CONSOLE ACTIVATE NAME(&SUSER)
+ CONSPROF SOLDISPLAY(NO)
+ CONSOLE SYSCMD(F CICSPRD1,FXRC &SCCY)
+ CONSOLE DEACTIVATE
+ SEND 'FXMNT01 - &SCCY UPDATED ON THE RATE TABLE' USER(&SUSER) LOGON
+/*

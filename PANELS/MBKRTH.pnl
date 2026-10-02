@@ -1,0 +1,42 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKRTH                                                 */
+/* TITLE    : HELP - INTEREST RATE CHANGES                           */
+/*-------------------------------------------------------------------*/
+/* 2010-04-12 AOS  ORIGINAL                                          */
+/* 2020-03-11 RKS  BANK RATE MASS-CHANGE PROCEDURE                   */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- INTEREST RATE CHANGES -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++One entry = one rate on one product.  INRAT010%announces+the change
++(writes MBK.PRD.INT.RATEPEND and the customer notices) and%applies+it to
++the product on the effective date.  Accounts on negotiated rates are not
++changed - they are listed for relationship managers.
++
+]Rate types+
++  %C+credit tier 1-5   %B+bonus rate   %A+arranged OD   %U+unarranged OD
++
+]Reason codes+
++  %BOER+Bank of England Bank Rate change  %MKTR+market / funding cost
++  %PRDR+product review (Pricing Committee) %CMPT+competitor response
++  %CORR+correction of an earlier change    %NPRD+new product (INRAT010 use)
++
+]Notice+
++   A lower savings rate or a higher overdraft rate needs 14 days notice.
++   INRAT010 rejects it otherwise - unless%Base rate tracker+is Y (the
++   product terms let the rate follow Bank Rate immediately).
++
+]Bank Rate day procedure+
++   1. Key every tracker product with the same effective date, reason
++      BOER and tracker Y - the screen keeps those fields between entries.
++   2. A second user approves the whole list (option A, line command A).
++   3. RELEASE on the approval list writes the file and submits INRAT01.
+)PROC
+  &ZUP = MBKMENUH
+)END

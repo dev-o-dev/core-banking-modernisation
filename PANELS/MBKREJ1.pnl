@@ -1,0 +1,39 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKREJ1                                                */
+/* TITLE    : REJECTION REASON (POP-UP) - SHARED BY ALL APPROVALS    */
+/* EXECS    : MBKPRDCH MBKRTCH MBKCGREF MBKGLSUS                     */
+/*-------------------------------------------------------------------*/
+/* THE REASON IS WRITTEN TO THE AUDIT LOG AND SENT TO THE REQUESTER  */
+/* (TSO SEND, FIRST 40 CHARACTERS).                                  */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2013-01-21 PDQ  SHARED - WAS ONE PER FUNCTION                     */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY WINDOW(60,9)
+%Command ===>_ZCMD                                          +
++
++Rejecting#RJKEY       +
++
++Reason (mandatory - sent to the requester):
+!RJTEXT                                                    +
++
++Press%ENTER+to reject,%PF3+to cancel.
+)INIT
+  &ZWINTTL = 'Reject item'
+  .CURSOR  = RJTEXT
+  .HELP    = MBKMENUH
+)PROC
+  IF (.RESP = ENTER)
+     VER (&RJTEXT,NB)
+     &RJLEN = LENGTH(RJTEXT)
+     IF (&RJLEN < 10)
+        &ZEDSMSG = 'Reason too short'
+        &ZEDLMSG = 'Give a reason the requester can act on (10+ chars).'
+        .MSG    = ISRZ001
+        .CURSOR = RJTEXT
+)END

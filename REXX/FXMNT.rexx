@@ -1,0 +1,546 @@
+/* REXX ***************************************************************/
+/* EXEC     : FXMNT                                                   */
+/* TITLE    : FX RATE TABLE - CURRENCY SET-UP AND MAINTENANCE         */
+/* LIBRARY  : MBK.PRD.REXX                                            */
+/* INVOKE   : MBKMENU OPTION 3   (TREASURY OPERATIONS)                */
+/* PANELS   : MBKFX1   CURRENCY DETAILS / ACTION                      */
+/*            MBKFX2   MARGIN TIERS                                   */
+/*            MBKFX3   CONFIRM - BEFORE AND AFTER                     */
+/*            MBKFXH   HELP                                           */
+/* BATCH    : FXMNT01 (SKELETON FXMNT01S) - IDCAMS REPRO REPLACE      */
+/*--------------------------------------------------------------------*/
+/* FILE     : <HLQ>.FX.RATES  VSAM KSDS  RECORDSIZE(150 150) KEYS(3 0)*/
+/*            COPYBOOK FXRATREC                                       */
+/*  COLS   1-3   FXR-CCY-CD                                           */
+/*  COLS   4-23  FXR-CCY-NAME                                         */
+/*  COLS  24     FXR-DECIMALS          9(1)                           */
+/*  COLS  25     FXR-STATUS            A ACTIVE  H HELD  S SUSPENDED  */
+/*  COLS  26-31  FXR-MID-RATE          S9(5)V9(6)  COMP-3  6 BYTES    */
+/*  COLS  32-37  FXR-PREV-MID-RATE     S9(5)V9(6)  COMP-3  6 BYTES    */
+/*  COLS  38-45  FXR-RATE-DATE         9(8)                           */
+/*  COLS  46-51  FXR-RATE-TIME         9(6)                           */
+/*  COLS  52-59  FXR-FIXING-ID         X(8)                           */
+/*  COLS  60-62  FXR-TOLERANCE-PCT     S9(2)V99    COMP-3  3 BYTES    */
+/*  COLS  63-102 FXR-MARGIN-TIER (4) - EACH 10 BYTES:                 */
+/*               FXR-TIER-GBP-UPTO     S9(11)V99   COMP-3  7 BYTES    */
+/*               FXR-TIER-MARGIN-BP    S9(4)       COMP-3  3 BYTES    */
+/*  COLS 103-109 FXR-MAX-DEAL-GBP      S9(11)V99   COMP-3  7 BYTES    */
+/*  COLS 110     FXR-SWIFT-ALLOWED     Y/N                            */
+/*  COLS 111     FXR-CARD-ALLOWED      Y/N                            */
+/*  COLS 112-119 FXR-LAST-MAINT-DATE                                  */
+/*  COLS 120-127 FXR-LAST-MAINT-USER                                  */
+/*  COLS 128-150 FILLER                                               */
+/*--------------------------------------------------------------------*/
+/* FXRAT010 ONLY UPDATES CURRENCIES ALREADY ON THE TABLE. THIS DIALOG */
+/* IS THE ONLY WAY TO ADD ONE. A NEW CURRENCY IS ADDED HELD ('H')     */
+/* WITH AN INDICATIVE MID RATE FROM TREASURY; IT BECOMES ACTIVE AT    */
+/* THE FIRST FIXING THAT PASSES THE TOLERANCE CHECK, OR WHEN TREASURY */
+/* SET IT ACTIVE HERE.                                                */
+/*                                                                    */
+/* THE ONLINE REGION READS THE FILE (FXSVC01) - A CICS WRITE IS NOT   */
+/* ALLOWED (FILE FXRATES IS READ-ONLY IN THE CSD). CHANGES ARE MADE   */
+/* BY BATCH JOB FXMNT01: IDCAMS REPRO REPLACE OF A ONE-RECORD STAGING */
+/* FILE, THEN A PRINT OF THE RECORD FOR THE TREASURY FILE COPY. THE   */
+/* RECORD IS REWRITTEN WHOLE SO CICS SEES OLD OR NEW (SHAREOPTIONS    */
+/* (2 3)) - SAME ARGUMENT AS FXRAT010.                                */
+/*                                                                    */
+/* MID RATES ARE NOT AMENDED HERE EXCEPT ON ADD - A RATE CORRECTION   */
+/* IS A FORCE CARD FROM GROUP TREASURY (SEE FXRAT010).                */
+/*--------------------------------------------------------------------*/
+/* 2011-05-09 JNB  ORIGINAL (PIR 2009/201)                            */
+/* 2012-11-26 JNB  SWIFT / CARD ALLOWED FLAGS                         */
+/* 2016-06-27 PDQ  TOLERANCE PER CURRENCY (BREXIT REFERENDUM - EVERY  */
+/*                 CURRENCY HELD AT THE 07:30 FIXING ON 24/06/2016)   */
+/* 2018-02-05 RKS  BEFORE / AFTER CONFIRMATION PANEL (INC 2018/0119 - */
+/*                 MARGIN TIERS KEYED IN PENCE, NOT POUNDS)           */
+/**********************************************************************/
+TRACE O
+NUMERIC DIGITS 20
+FUNC = 'FX'
+
+IF SYSVAR('SYSISPF') <> 'ACTIVE' THEN DO
+   SAY 'FXMNT - RUN FROM THE MBKMENU DIALOG'
+   EXIT 12
+END
+ADDRESS ISPEXEC
+"CONTROL ERRORS RETURN"
+"VGET (MBKHLQ MBKBDATE) SHARED"
+IF MBKHLQ = '' | MBKBDATE = '' THEN DO
+   CALL MSG 'START FROM MBKMENU', 'FXMNT MUST BE STARTED FROM MBKMENU'
+   EXIT 12
+END
+FXDSN    = MBKHLQ'.FX.RATES'
+STAGEDSN = MBKHLQ'.FX.MAINT.'USERID()
+USER     = USERID()
+MAXUPTO  = 99999999999.99
+
+LV = MBKAUTH('LEVELS', FUNC)
+IF LV = '' THEN DO
+   CALL AUDIT 'DENIED', '', 'FX MAINTENANCE - NO AUTHORITY'
+   CALL MSG 'NOT AUTHORISED', 'YOU ARE NOT AUTHORISED FOR FX',
+      'CURRENCY MAINTENANCE.'
+   EXIT 8
+END
+CAN_UPDATE = (POS('K', LV) > 0)
+
+FXCCY = ''; FXACT = 'D'
+"VGET (FXCCY) PROFILE"
+DO FOREVER
+   CALL CLEAR_DETAIL
+   "DISPLAY PANEL(MBKFX1)"
+   IF RC >= 8 THEN LEAVE
+   "VPUT (FXCCY) PROFILE"
+   IF FXACT <> 'D' & \CAN_UPDATE THEN DO
+      CALL MSG 'DISPLAY ONLY', 'YOU MAY DISPLAY BUT NOT CHANGE FX',
+         'CURRENCIES (NO LEVEL K).'
+      ITERATE
+   END
+   SELECT
+      WHEN FXACT = 'D' THEN CALL DISPLAY_CCY
+      WHEN FXACT = 'A' THEN CALL ADD_CCY
+      WHEN FXACT = 'M' THEN CALL AMEND_CCY
+      WHEN FXACT = 'T' THEN CALL TIERS_CCY
+      WHEN FXACT = 'S' THEN CALL STATUS_CCY
+      OTHERWISE CALL MSG 'INVALID ACTION', 'ACTION D, A, M, T OR S.'
+   END
+END
+EXIT 0
+
+/*====================================================================*/
+/* ACTIONS                                                            */
+/*====================================================================*/
+DISPLAY_CCY:
+   IF READ_CCY(FXCCY) <> 0 THEN RETURN
+   CALL UNPACK_RECORD CUR
+   FXMODE = 'DISPLAY'
+   "DISPLAY PANEL(MBKFX1)"
+   RETURN
+
+ADD_CCY:
+   IF READ_CCY(FXCCY, 'QUIET') = 0 THEN DO
+      CALL MSG 'ALREADY EXISTS', FXCCY 'IS ALREADY ON THE RATE',
+         'TABLE - USE M TO AMEND.'
+      RETURN
+   END
+   IF FXCCY = 'GBP' THEN DO
+      CALL MSG 'BASE CURRENCY', 'GBP IS THE BASE CURRENCY - IT IS',
+         'NOT HELD ON THE TABLE.'
+      RETURN
+   END
+   /* DEFAULTS FROM TREASURY OPERATIONS PROCEDURE TO-14 */
+   FXNAME = ''; FXDEC = 2; FXSTAT = 'H'; FXMID = ''; FXTOL = '5.00'
+   FXMAX = '250000.00'; FXSWIFT = 'Y'; FXCARD = 'N'
+   T1UP = '1000.00';    T1BP = 300
+   T2UP = '10000.00';   T2BP = 200
+   T3UP = '50000.00';   T3BP = 120
+   T4UP = MAXUPTO;      T4BP = 80
+   FXMODE = 'ADD'
+   CUR = ''
+   DO FOREVER
+      "DISPLAY PANEL(MBKFX1)"
+      IF RC >= 8 THEN RETURN
+      E = VALIDATE_DETAIL()
+      IF E <> '' THEN DO; CALL MSG 'INVALID', E; ITERATE; END
+      E = VALIDATE_MID()
+      IF E <> '' THEN DO; CALL MSG 'INVALID', E; ITERATE; END
+      "DISPLAY PANEL(MBKFX2)"
+      IF RC >= 8 THEN ITERATE
+      E = VALIDATE_TIERS()
+      IF E <> '' THEN DO; CALL MSG 'INVALID', E; ITERATE; END
+      LEAVE
+   END
+   NEW = BUILD_NEW_RECORD()
+   CALL CONFIRM_AND_SUBMIT 'ADD'
+   RETURN
+
+AMEND_CCY:
+   IF READ_CCY(FXCCY) <> 0 THEN RETURN
+   CALL UNPACK_RECORD CUR
+   FXMODE = 'AMEND'
+   DO FOREVER
+      "DISPLAY PANEL(MBKFX1)"
+      IF RC >= 8 THEN RETURN
+      E = VALIDATE_DETAIL()
+      IF E = '' THEN LEAVE
+      CALL MSG 'INVALID', E
+   END
+   NEW = OVERLAY_DETAIL(CUR)
+   IF NEW == CUR THEN DO
+      CALL MSG 'NO CHANGE', 'NOTHING WAS CHANGED.'
+      RETURN
+   END
+   CALL CONFIRM_AND_SUBMIT 'AMEND'
+   RETURN
+
+TIERS_CCY:
+   IF READ_CCY(FXCCY) <> 0 THEN RETURN
+   CALL UNPACK_RECORD CUR
+   FXMODE = 'TIERS'
+   DO FOREVER
+      "DISPLAY PANEL(MBKFX2)"
+      IF RC >= 8 THEN RETURN
+      E = VALIDATE_TIERS()
+      IF E = '' THEN LEAVE
+      CALL MSG 'INVALID', E
+   END
+   NEW = OVERLAY_TIERS(CUR)
+   IF NEW == CUR THEN DO
+      CALL MSG 'NO CHANGE', 'THE MARGIN TIERS ARE UNCHANGED.'
+      RETURN
+   END
+   CALL CONFIRM_AND_SUBMIT 'TIERS'
+   RETURN
+
+STATUS_CCY:
+   IF READ_CCY(FXCCY) <> 0 THEN RETURN
+   CALL UNPACK_RECORD CUR
+   OLDSTAT = FXSTAT
+   FXMODE = 'STATUS'
+   DO FOREVER
+      "DISPLAY PANEL(MBKFX1)"
+      IF RC >= 8 THEN RETURN
+      IF WORDPOS(FXSTAT, 'A H S') = 0 THEN DO
+         CALL MSG 'INVALID', 'STATUS MUST BE A, H OR S.'
+         ITERATE
+      END
+      IF FXSTAT = OLDSTAT THEN DO
+         CALL MSG 'NO CHANGE', 'STATUS IS ALREADY' FXSTAT'.'
+         ITERATE
+      END
+      IF FXSTAT = 'A' & FXMID = 0 THEN DO
+         CALL MSG 'NO RATE', FXCCY 'HAS NO MID RATE - IT CANNOT BE',
+            'MADE ACTIVE UNTIL A FIXING HAS LOADED.'
+         ITERATE
+      END
+      IF FXSTAT = 'A' & RTDATE < MBKBDATE THEN DO
+         CALL MSG 'RATE IS OLD', 'THE MID RATE IS DATED' RTDATE,
+            '- TREASURY MUST RESEND A FORCE CARD BEFORE ACTIVATING.'
+         ITERATE
+      END
+      LEAVE
+   END
+   NEW = OVERLAY(FXSTAT, CUR, 25)
+   NEW = STAMP(NEW)
+   CALL CONFIRM_AND_SUBMIT 'STATUS' OLDSTAT '->' FXSTAT
+   RETURN
+
+/*====================================================================*/
+/* CONFIRM (BEFORE / AFTER), STAGE, SUBMIT FXMNT01, AUDIT             */
+/*====================================================================*/
+CONFIRM_AND_SUBMIT:
+   PARSE ARG WHAT
+   /* BEFORE / AFTER LINES FOR THE CONFIRMATION PANEL */
+   IF CUR = '' THEN FXBEF = 'NEW CURRENCY'
+   ELSE FXBEF = SUMMARY(CUR)
+   FXAFT = SUMMARY(NEW)
+   FXBTIER = ''
+   IF CUR <> '' THEN FXBTIER = TIER_SUMMARY(CUR)
+   FXATIER = TIER_SUMMARY(NEW)
+   FXWHAT = WHAT
+   FXCONF = ''
+   "DISPLAY PANEL(MBKFX3)"
+   IF RC >= 8 | FXCONF <> 'Y' THEN DO
+      CALL MSG 'NOT CHANGED', 'NO CHANGE WAS MADE TO' FXCCY'.'
+      RETURN
+   END
+   IF LENGTH(NEW) <> 150 THEN DO
+      CALL MSG 'INTERNAL ERROR', 'RECORD LENGTH' LENGTH(NEW)
+      RETURN
+   END
+   /* ONE-RECORD STAGING FILE PER USER, REPLACED EACH TIME */
+   CALL OUTTRAP 'X.'
+   ADDRESS TSO "DELETE '"STAGEDSN"'"
+   CALL OUTTRAP 'OFF'
+   ADDRESS TSO "ALLOC F(FXSTG) DA('"STAGEDSN"') NEW CATALOG",
+      "UNIT(SYSDA) SPACE(1 1) TRACKS RECFM(F B) LRECL(150)",
+      "BLKSIZE(0) REUSE"
+   IF RC <> 0 THEN DO
+      CALL MSG 'ALLOCATION FAILED', 'CANNOT CREATE' STAGEDSN 'RC='RC
+      RETURN
+   END
+   STG.1 = NEW
+   ADDRESS TSO "EXECIO 1 DISKW FXSTG (STEM STG. FINIS"
+   WRC = RC
+   ADDRESS TSO "FREE F(FXSTG)"
+   IF WRC <> 0 THEN DO
+      CALL MSG 'WRITE FAILED', 'STAGING WRITE RC='WRC
+      RETURN
+   END
+   CALL AUDIT 'REQUEST', FXCCY, WHAT 'BEFORE:' FXBEF
+   CALL AUDIT 'REQUEST', FXCCY, WHAT 'AFTER :' FXAFT
+   IF WORD(WHAT,1) <> 'STATUS' THEN DO
+      CALL AUDIT 'REQUEST', FXCCY, 'TIERS BEFORE:' FXBTIER
+      CALL AUDIT 'REQUEST', FXCCY, 'TIERS AFTER :' FXATIER
+   END
+   SSTAGE = STAGEDSN
+   SCCY   = FXCCY
+   SFXDSN = FXDSN
+   "VPUT (SSTAGE SCCY SFXDSN) SHARED"
+   SRC = MBKSUBMT('FXMNT01S', FUNC, FXCCY, 'FX MAINT' FXCCY)
+   IF SRC <> 0 THEN DO
+      CALL MSG 'NOT SUBMITTED', 'THE CHANGE TO' FXCCY 'IS STAGED IN',
+         STAGEDSN 'BUT FXMNT01 WAS NOT SUBMITTED. THE RATE TABLE',
+         'IS UNCHANGED.'
+   END
+   RETURN
+
+/*====================================================================*/
+/* READ ONE CURRENCY WITH IDCAMS REPRO FROMKEY/TOKEY                  */
+/*====================================================================*/
+READ_CCY:
+   PARSE ARG RCCY, QUIET
+   CUR = ''
+   RCCY = TRANSLATE(STRIP(RCCY))
+   IF LENGTH(RCCY) <> 3 | \DATATYPE(RCCY,'U') THEN DO
+      CALL MSG 'INVALID CURRENCY', 'CURRENCY CODE IS 3 LETTERS (ISO',
+         '4217).'
+      RETURN 8
+   END
+   CALL OUTTRAP 'X.'
+   ADDRESS TSO "ALLOC F(FXIN) DA('"FXDSN"') SHR REUSE"
+   A1 = RC
+   ADDRESS TSO "ALLOC F(FXOUT) NEW UNIT(SYSDA) SPACE(1 1) TRACKS",
+      "RECFM(F B) LRECL(150) BLKSIZE(0) REUSE"
+   A2 = RC
+   ADDRESS TSO "ALLOC F(SYSPRINT) NEW UNIT(SYSDA) SPACE(1 1) TRACKS",
+      "RECFM(V B A) LRECL(125) BLKSIZE(0) REUSE"
+   A3 = RC
+   ADDRESS TSO "ALLOC F(SYSIN) NEW UNIT(SYSDA) SPACE(1 1) TRACKS",
+      "RECFM(F B) LRECL(80) BLKSIZE(0) REUSE"
+   A4 = RC
+   CALL OUTTRAP 'OFF'
+   IF A1 + A2 + A3 + A4 <> 0 THEN DO
+      CALL FREE_IDCAMS
+      CALL MSG 'ALLOCATION FAILED', 'CANNOT ALLOCATE' FXDSN 'OR',
+         'WORK FILES (RC' A1 A2 A3 A4')'
+      RETURN 8
+   END
+   CTL.1 = '  REPRO INFILE(FXIN) OUTFILE(FXOUT) -'
+   CTL.2 = '        FROMKEY('RCCY') TOKEY('RCCY')'
+   ADDRESS TSO "EXECIO 2 DISKW SYSIN (STEM CTL. FINIS"
+   ADDRESS LINKMVS "IDCAMS"
+   IRC = RC
+   REC.0 = 0
+   IF IRC = 0 THEN ADDRESS TSO "EXECIO * DISKR FXOUT (STEM REC. FINIS"
+   CALL FREE_IDCAMS
+   /* IDCAMS RC 4 = NO RECORDS IN RANGE (IDC3655I) */
+   IF IRC > 4 THEN DO
+      CALL MSG 'IDCAMS ERROR', 'REPRO FROM' FXDSN 'FAILED RC='IRC
+      RETURN 8
+   END
+   IF REC.0 = 0 THEN DO
+      IF QUIET = '' THEN CALL MSG 'NOT FOUND', RCCY 'IS NOT ON THE',
+         'RATE TABLE - USE ACTION A TO ADD IT.'
+      RETURN 4
+   END
+   CUR = LEFT(REC.1, 150)
+   RETURN 0
+
+FREE_IDCAMS:
+   CALL OUTTRAP 'X.'
+   ADDRESS TSO "FREE F(FXIN FXOUT SYSIN SYSPRINT)"
+   /* GIVE THE TERMINAL BACK ITS SYSIN / SYSPRINT */
+   ADDRESS TSO "ALLOC F(SYSIN) DA(*) REUSE"
+   ADDRESS TSO "ALLOC F(SYSPRINT) DA(*) REUSE"
+   CALL OUTTRAP 'OFF'
+   RETURN
+
+/*====================================================================*/
+/* RECORD <-> PANEL VARIABLES                                         */
+/*====================================================================*/
+UNPACK_RECORD:
+   PARSE ARG R
+   FXNAME  = STRIP(SUBSTR(R, 4, 20))
+   FXDEC   = SUBSTR(R, 24, 1)
+   FXSTAT  = SUBSTR(R, 25, 1)
+   FXMID   = FORMAT(UNPACK(SUBSTR(R, 26, 6), 6),,6)
+   FXPREV  = FORMAT(UNPACK(SUBSTR(R, 32, 6), 6),,6)
+   RTDATE  = SUBSTR(R, 38, 8)
+   RTTIME  = SUBSTR(R, 46, 6)
+   FXFIXID = STRIP(SUBSTR(R, 52, 8))
+   FXTOL   = FORMAT(UNPACK(SUBSTR(R, 60, 3), 2),,2)
+   DO T = 1 TO 4
+      P = 63 + (T - 1) * 10
+      UP = FORMAT(UNPACK(SUBSTR(R, P, 7), 2),,2)
+      BP = UNPACK(SUBSTR(R, P + 7, 3), 0)
+      INTERPRET 'T'T'UP = UP; T'T'BP = BP'
+   END
+   FXMAX   = FORMAT(UNPACK(SUBSTR(R, 103, 7), 2),,2)
+   FXSWIFT = SUBSTR(R, 110, 1)
+   FXCARD  = SUBSTR(R, 111, 1)
+   FXMDATE = SUBSTR(R, 112, 8)
+   FXMUSER = STRIP(SUBSTR(R, 120, 8))
+   RETURN
+
+CLEAR_DETAIL:
+   FXNAME = ''; FXDEC = ''; FXSTAT = ''; FXMID = ''; FXPREV = ''
+   RTDATE = ''; RTTIME = ''; FXFIXID = ''; FXTOL = ''; FXMAX = ''
+   FXSWIFT = ''; FXCARD = ''; FXMDATE = ''; FXMUSER = ''
+   FXMODE = ''
+   DO T = 1 TO 4
+      INTERPRET 'T'T'UP = ""; T'T'BP = ""'
+   END
+   RETURN
+
+BUILD_NEW_RECORD:
+   R = LEFT(FXCCY, 3)               ||,   /*   1-3   CCY-CD        */
+       LEFT(FXNAME, 20)             ||,   /*   4-23  CCY-NAME      */
+       LEFT(FXDEC, 1)               ||,   /*  24     DECIMALS      */
+       'H'                          ||,   /*  25     STATUS (HELD) */
+       PACK(FXMID, 11, 6)           ||,   /*  26-31  MID-RATE      */
+       PACK(0, 11, 6)               ||,   /*  32-37  PREV-MID      */
+       RIGHT(MBKBDATE, 8, '0')      ||,   /*  38-45  RATE-DATE     */
+       SPACE(TRANSLATE(TIME('N'),' ',':'),0) ||,  /* 46-51 TIME    */
+       LEFT('MANUAL', 8)            ||,   /*  52-59  FIXING-ID     */
+       PACK(FXTOL, 4, 2)            ||,   /*  60-62  TOLERANCE     */
+       COPIES(' ', 40)              ||,   /*  63-102 TIERS (BELOW) */
+       PACK(FXMAX, 13, 2)           ||,   /* 103-109 MAX-DEAL      */
+       LEFT(FXSWIFT, 1)             ||,   /* 110     SWIFT-ALLOWED */
+       LEFT(FXCARD, 1)              ||,   /* 111     CARD-ALLOWED  */
+       COPIES(' ', 16)              ||,   /* 112-127 STAMP (BELOW) */
+       COPIES(' ', 23)                    /* 128-150 FILLER        */
+   R = OVERLAY_TIERS(R)
+   RETURN STAMP(R)
+
+OVERLAY_DETAIL: PROCEDURE EXPOSE FXNAME FXDEC FXTOL FXMAX FXSWIFT,
+                FXCARD MBKBDATE USER
+   PARSE ARG R
+   R = OVERLAY(LEFT(FXNAME,20), R, 4)
+   R = OVERLAY(LEFT(FXDEC,1), R, 24)
+   R = OVERLAY(PACK(FXTOL, 4, 2), R, 60)
+   R = OVERLAY(PACK(FXMAX, 13, 2), R, 103)
+   R = OVERLAY(LEFT(FXSWIFT,1)LEFT(FXCARD,1), R, 110)
+   IF R == ARG(1) THEN RETURN R
+   RETURN STAMP(R)
+
+OVERLAY_TIERS:
+   PARSE ARG R
+   ORIG = R
+   DO T = 1 TO 4
+      P = 63 + (T - 1) * 10
+      R = OVERLAY(PACK(VALUE('T'T'UP'), 13, 2), R, P)
+      R = OVERLAY(PACK(VALUE('T'T'BP'), 4, 0), R, P + 7)
+   END
+   IF R == ORIG THEN RETURN R
+   RETURN STAMP(R)
+
+STAMP: PROCEDURE EXPOSE MBKBDATE USER
+   PARSE ARG R
+   R = OVERLAY(RIGHT(MBKBDATE,8,'0'), R, 112)
+   R = OVERLAY(LEFT(USER,8), R, 120)
+   RETURN R
+
+SUMMARY: PROCEDURE
+   PARSE ARG R
+   NUMERIC DIGITS 20
+   RETURN STRIP(SUBSTR(R,4,20)) 'DEC' SUBSTR(R,24,1),
+      'ST' SUBSTR(R,25,1) 'MID' FORMAT(UNPACK(SUBSTR(R,26,6),6),,6),
+      'TOL' FORMAT(UNPACK(SUBSTR(R,60,3),2),,2),
+      'MAX' FORMAT(UNPACK(SUBSTR(R,103,7),2),,2),
+      'SW' SUBSTR(R,110,1) 'CD' SUBSTR(R,111,1)
+
+TIER_SUMMARY: PROCEDURE
+   PARSE ARG R
+   NUMERIC DIGITS 20
+   S = ''
+   DO T = 1 TO 4
+      P = 63 + (T - 1) * 10
+      UP = UNPACK(SUBSTR(R, P, 7), 2)
+      IF UP >= 99999999999 THEN UP = 'MAX'
+      ELSE UP = FORMAT(UP,,0)
+      S = S UP'/'UNPACK(SUBSTR(R, P + 7, 3), 0)
+   END
+   RETURN STRIP(S)
+
+/*====================================================================*/
+/* VALIDATION                                                         */
+/*====================================================================*/
+VALIDATE_DETAIL:
+   FXNAME = TRANSLATE(STRIP(FXNAME))
+   IF FXNAME = '' THEN RETURN 'CURRENCY NAME REQUIRED.'
+   IF \DATATYPE(FXDEC,'W') | FXDEC < 0 | FXDEC > 3 THEN,
+      RETURN 'DECIMALS MUST BE 0-3 (JPY 0, KWD 3).'
+   IF \DATATYPE(FXTOL,'N') THEN RETURN 'TOLERANCE % IS NUMERIC.'
+   IF FXTOL <= 0 | FXTOL > 25 THEN,
+      RETURN 'TOLERANCE MUST BE 0.01-25.00% (TREASURY LIMIT).'
+   FXTOL = FORMAT(FXTOL,,2)
+   V = SPACE(TRANSLATE(FXMAX,' ',','),0)
+   IF \DATATYPE(V,'N') | V <= 0 | V > 99999999999.99 THEN,
+      RETURN 'MAXIMUM DEAL (GBP) MUST BE A POSITIVE AMOUNT.'
+   FXMAX = FORMAT(V,,2)
+   IF WORDPOS(FXSWIFT,'Y N') = 0 | WORDPOS(FXCARD,'Y N') = 0 THEN,
+      RETURN 'SWIFT / CARD ALLOWED MUST BE Y OR N.'
+   RETURN ''
+
+VALIDATE_MID:
+   V = STRIP(FXMID)
+   IF \DATATYPE(V,'N') | V <= 0 | V > 99999.999999 THEN,
+      RETURN 'INDICATIVE MID RATE REQUIRED (UNITS PER 1 GBP).'
+   IF DECS(V) > 6 THEN RETURN 'MID RATE HAS AT MOST 6 DECIMALS.'
+   FXMID = FORMAT(V,,6)
+   RETURN ''
+
+VALIDATE_TIERS:
+   PREV = 0
+   DO T = 1 TO 4
+      UP = SPACE(TRANSLATE(VALUE('T'T'UP'),' ',','),0)
+      BP = STRIP(VALUE('T'T'BP'))
+      IF TRANSLATE(UP) = 'MAX' THEN UP = MAXUPTO
+      IF \DATATYPE(UP,'N') | UP <= 0 THEN,
+         RETURN 'TIER' T 'UP-TO AMOUNT MUST BE POSITIVE (OR MAX).'
+      IF UP > MAXUPTO THEN RETURN 'TIER' T 'UP-TO IS TOO LARGE.'
+      IF UP <= PREV THEN RETURN 'TIER UP-TO AMOUNTS MUST ASCEND.'
+      IF \DATATYPE(BP,'W') | BP < 0 | BP > 2000 THEN,
+         RETURN 'TIER' T 'MARGIN MUST BE 0-2000 BASIS POINTS.'
+      IF T > 1 THEN IF BP > VALUE('T'||(T-1)||'BP') THEN,
+         RETURN 'MARGINS MUST NOT RISE WITH THE AMOUNT (TIER' T').'
+      INTERPRET 'T'T'UP = FORMAT(UP,,2); T'T'BP = BP'
+      PREV = UP
+   END
+   IF T4UP <> FORMAT(MAXUPTO,,2) THEN,
+      RETURN 'TIER 4 MUST BE OPEN-ENDED - KEY MAX AS ITS UP-TO.'
+   RETURN ''
+
+/*====================================================================*/
+/* UTILITIES                                                          */
+/*====================================================================*/
+PACK: PROCEDURE
+   PARSE ARG VAL, DIGITS, SCALE
+   NUMERIC DIGITS 31
+   IF \DATATYPE(VAL,'N') THEN VAL = 0
+   N = TRUNC(VAL * (10 ** SCALE))
+   SIGN = 'C'
+   IF N < 0 THEN SIGN = 'D'
+   NIB = (DIGITS % 2) * 2 + 1
+   RETURN X2C(RIGHT(ABS(N), NIB, '0') || SIGN)
+
+UNPACK: PROCEDURE
+   PARSE ARG STR, SCALE
+   NUMERIC DIGITS 31
+   H = C2X(STR)
+   S = RIGHT(H, 1)
+   D = LEFT(H, LENGTH(H) - 1)
+   IF \DATATYPE(D, 'W') THEN RETURN 0
+   N = D / (10 ** SCALE)
+   IF S = 'D' | S = 'B' THEN N = -N
+   RETURN N
+
+DECS: PROCEDURE
+   PARSE ARG N
+   IF POS('.', N) = 0 THEN RETURN 0
+   RETURN LENGTH(STRIP(SUBSTR(N, POS('.', N) + 1), 'T', '0'))
+
+AUDIT:
+   PARSE ARG AACT, AKEY, ATXT
+   CALL MBKAUDIT 'LOG', FUNC, AACT, AKEY, ATXT
+   IF RESULT <> 0 THEN,
+      CALL MSG 'AUDIT FAILURE', 'THE AUDIT LOG COULD NOT BE WRITTEN',
+         '- STOP AND CALL CORE SYSTEMS SUPPORT.'
+   RETURN
+
+MSG: PROCEDURE
+   PARSE ARG SHORT, LONG
+   ZEDSMSG = SHORT
+   ZEDLMSG = LONG
+   ADDRESS ISPEXEC "SETMSG MSG(ISRZ001)"
+   RETURN

@@ -1,0 +1,45 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKRT2                                                 */
+/* TITLE    : INTEREST RATE CHANGES - APPROVAL LIST                  */
+/* EXEC     : MBKRTCH (APPROVE_LIST) - TABLE RTAPPR                  */
+/*-------------------------------------------------------------------*/
+/* LISTS PENDING (P*) AND APPROVED-NOT-RELEASED (A*) CHANGES.        */
+/* LINE COMMANDS  A APPROVE   R REJECT                               */
+/* PRIMARY COMMAND RELEASE - WRITE ALL APPROVED CHANGES TO           */
+/*   MBK.PRD.INT.RATECHG.INPUT(+1) AND SUBMIT INRAT01                */
+/*-------------------------------------------------------------------*/
+/* 2010-04-12 AOS  ORIGINAL                                          */
+/* 2013-01-21 PDQ  PENDING QUEUE, RELEASE COMMAND                    */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - RATE CHANGES FOR APPROVAL -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Line commands:%A+approve  %R+reject      Primary command:%RELEASE+(write the
++approved changes and submit INRAT01 - submit authority needed)
++
+%S Change ref   Keyed by Product    T Tr  New rate Eff date Rsn  B Status
+%- ------------ -------- ---------- - -- --------- -------- ---- - ------------
+)MODEL ROWS(SCAN)
+_Z#AREF        #AUSER   #APROD     #Z#Z @ANEW     #AEFF    #ARSN#Z#ASTAT       +
+)INIT
+  .ZVARS = '(ASEL ATYPE ATIER ABASE)'
+  .HELP  = MBKRTH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  &ASEL = ' '
+)PROC
+  &ZCMD = TRUNC(&ZCMD,' ')
+  IF (&ZCMD NE ' ')
+     VER (&ZCMD,LIST,RELEASE)
+  IF (&ZTDSELS NE 0000)
+     VER (&ASEL,LIST,A,R)
+  VPUT (AMT) PROFILE
+)END

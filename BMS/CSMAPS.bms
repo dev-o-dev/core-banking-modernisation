@@ -1,0 +1,99 @@
+***********************************************************************
+* MAPSET   : CSMAPS                                                   *
+* TITLE    : CASS - BRANCH CURRENT ACCOUNT SWITCH                     *
+* PROGRAM  : CSSCRN1   TRANSACTION CS01                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(CSMAPS)    *
+*---------------------------------------------------------------------*
+* 2013-07-08 PDQ  ORIGINAL VERSION (CASS GO-LIVE 16/09/2013)          *
+***********************************************************************
+CSMAPS   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+CSM01    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='CS01'
+         DFHMDF POS=(1,20),LENGTH=39,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  CURRENT ACCOUNT SWITCH'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- KEY ---------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='SORT CODE:'
+SORTCD   DFHMDF POS=(3,12),LENGTH=6,ATTRB=(UNPROT,BRT,IC,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,19),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,22),LENGTH=8,ATTRB=(ASKIP,NORM),                X
+               INITIAL='ACCOUNT:'
+ACCTNO   DFHMDF POS=(3,31),LENGTH=8,ATTRB=(UNPROT,BRT,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,40),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,44),LENGTH=8,ATTRB=(ASKIP,NORM),                X
+               INITIAL='PRODUCT:'
+PRODCD   DFHMDF POS=(3,53),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(4,1),LENGTH=9,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='CUSTOMER:'
+CUSTNM   DFHMDF POS=(4,12),LENGTH=40,ATTRB=(ASKIP,BRT)
+*        ---- SWITCHES ----------------------------------------------
+         DFHMDF POS=(6,1),LENGTH=79,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='S SWITCH ID          DIR ST OLD ACCOUNT     SWIX
+               TCH DT  SOS DDS RSN'
+SEL1     DFHMDF POS=(7,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL1     DFHMDF POS=(7,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL2     DFHMDF POS=(8,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL2     DFHMDF POS=(8,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL3     DFHMDF POS=(9,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL3     DFHMDF POS=(9,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL4     DFHMDF POS=(10,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL4     DFHMDF POS=(10,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL5     DFHMDF POS=(11,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL5     DFHMDF POS=(11,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL6     DFHMDF POS=(12,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL6     DFHMDF POS=(12,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL7     DFHMDF POS=(13,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL7     DFHMDF POS=(13,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL8     DFHMDF POS=(14,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL8     DFHMDF POS=(14,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL9     DFHMDF POS=(15,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL9     DFHMDF POS=(15,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL10    DFHMDF POS=(16,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+SWL10    DFHMDF POS=(16,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+*        ---- NEW SWITCH REQUEST ----------------------------------
+         DFHMDF POS=(18,1),LENGTH=40,ATTRB=(ASKIP,BRT),                X
+               INITIAL='NEW SWITCH IN - CUSTOMERS OLD BANK ACCOUNT'
+         DFHMDF POS=(19,1),LENGTH=14,ATTRB=(ASKIP,NORM),               X
+               INITIAL='OLD SORT CODE:'
+OLDSC    DFHMDF POS=(19,16),LENGTH=6,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(19,23),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(19,26),LENGTH=12,ATTRB=(ASKIP,NORM),              X
+               INITIAL='OLD ACCOUNT:'
+OLDACC   DFHMDF POS=(19,39),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(19,48),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,1),LENGTH=22,ATTRB=(ASKIP,NORM),               X
+               INITIAL='SWITCH DATE CCYYMMDD:'
+SWDATE   DFHMDF POS=(20,24),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(20,33),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,36),LENGTH=15,ATTRB=(ASKIP,NORM),              X
+               INITIAL='EARLIEST DATE:'
+EARLY    DFHMDF POS=(20,52),LENGTH=10,ATTRB=(ASKIP,BRT)
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=68,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=LIST/REQUEST PF3=EXIT PF5=CONFIRM REQUESTX
+                 X=CANCEL  PF12=CF02'
+*
+         DFHMSD TYPE=FINAL
+         END

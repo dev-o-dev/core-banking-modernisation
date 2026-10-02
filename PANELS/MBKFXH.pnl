@@ -1,0 +1,42 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKFXH                                                 */
+/* TITLE    : HELP - FX CURRENCY MAINTENANCE (FXMNT)                 */
+/*-------------------------------------------------------------------*/
+/* 2011-05-09 JNB  ORIGINAL                                          */
+/* 2016-06-27 PDQ  TOLERANCE                                         */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- FX CURRENCY MAINTENANCE -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++The FX rate table holds one record per currency: units of currency per
++one pound.  Group Treasury's fixing files (07:30 and 14:00) update the mid
++rates through FXRAT010.  This dialog maintains everything else.
++
+]Actions+
++  %D+display  %A+add a currency (held, with an indicative mid rate)
++  %M+amend name / decimals / tolerance / max deal / SWIFT / card flags
++  %T+customer margin tiers   %S+status A (active) H (held) S (suspended)
++
+]Status+
++  %A+quoted normally.  %H+quoted with a warning (FXSVC01) - set by
++   FXRAT010 when a fixing moves more than the tolerance.  %S+not quoted
++   at all (sanctions, currency withdrawn).  Activating needs a mid rate
++   dated today.
++
+]Tolerance+
++   Maximum move between fixings, in percent, before the currency is held.
++   Default 5.00.  Volatile currencies (TRY, ARS) are set higher by
++   Treasury Risk; the limit here is 25.00.
++
+]After you confirm+
++   The new record is written to MBK.PRD.FX.MAINT.<userid> and job FXMNT01
++   (IDCAMS REPRO REPLACE) is offered.  Nothing changes until it runs.
+)PROC
+  &ZUP = MBKMENUH
+)END

@@ -1,0 +1,53 @@
+)CM ******************************************************************
+)CM SKELETON : GLSUS01S
+)CM TITLE    : GL SUSPENSE CLEARING AND AGEING - RERUN OUTSIDE CA-7
+)CM BASED ON : MBK.PRD.JCL(GLSUS01) - KEEP IN STEP
+)CM CALLED BY: MBKSUBMT (ADM LEVEL R OVERRIDE REQUIRED)
+)CM ------------------------------------------------------------------
+)CM SAFE TO RERUN: GLSUS010 REJECTS INSTRUCTIONS FOR ITEMS ALREADY
+)CM CLEARED ("ITEM IS NOT OPEN") AND THE AGEING IS RECALCULATED.
+)CM GS020 EMAILS THE ESCALATION FILE TO THE FINANCE CONTROLLER - IT IS
+)CM BYPASSED ON A RERUN (SDUPMAIL = N) TO AVOID A SECOND EMAIL.
+)CM ------------------------------------------------------------------
+)CM 2013-01-21 PDQ  ORIGINAL
+)CM ******************************************************************
+)SET SDB2 = Y
+)SET SDUPMAIL = N
+)IM MBKJOBC
+//*------------------------------------------------------------------*
+//* GLSUS01 RERUN - GL SUSPENSE CLEARING AND AGEING
+//*------------------------------------------------------------------*
+//* GS010 - SUSPENSE AGEING (GLSUS010)
+//*------------------------------------------------------------------*
+//GS010    EXEC MBKDB2B
+//STEP.CLEARIN  DD DISP=SHR,DSN=&SHLQ..GL.SUSP.CLEARED(0)
+//STEP.ESCALATE DD DSN=&SHLQ..GL.SUSP.ESCALATE(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(CYL,(1,1),RLSE),
+//            DCB=(RECFM=FBA,LRECL=133,BLKSIZE=0)
+//STEP.REPORT   DD SYSOUT=(R,,GLS1),
+//            DCB=(RECFM=FBA,LRECL=133,BLKSIZE=0)
+//STEP.SYSTSIN  DD *
+ DSN SYSTEM(DB2P)
+ RUN PROGRAM(GLSUS010) PLAN(GLSUS010) LIB('&SHLQ..LOADLIB')
+ END
+/*
+)SEL &SDUPMAIL = Y
+//*------------------------------------------------------------------*
+//* GS020 - EMAIL THE ESCALATION LIST (SMTP VIA IEBGENER)
+//*------------------------------------------------------------------*
+//GS020    EXEC PGM=IEBGENER,COND=(4,LT,GS010.STEP)
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD DUMMY
+//SYSUT1   DD DISP=SHR,DSN=&SHLQ..CNTL(GLSMAILH)
+//         DD DISP=SHR,DSN=&SHLQ..GL.SUSP.ESCALATE(+1)
+//SYSUT2   DD SYSOUT=(B,SMTP)
+)ENDSEL
+//*------------------------------------------------------------------*
+//* GS030 - TELL THE SUBMITTER (RC 4 = ITEMS OVER 90 DAYS)
+//*------------------------------------------------------------------*
+//GS030    EXEC PGM=IKJEFT01,COND=EVEN
+//SYSTSPRT DD SYSOUT=*
+//SYSTSIN  DD *
+ SEND 'GLSUS01 RERUN ENDED - CHECK GLS1 REPORT' USER(&SUSER) LOGON
+/*

@@ -1,0 +1,43 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRD5                                                */
+/* TITLE    : PRODUCT CHANGE SETS AWAITING APPROVAL                  */
+/* EXEC     : MBKPRDCH (APPROVE_LIST) - TABLE PRDAPPR                */
+/*-------------------------------------------------------------------*/
+/* LINE COMMANDS  S REVIEW THE CARDS   A APPROVE   R REJECT          */
+/* APPROVAL STAMPS PCH-APPROVED-BY (COLS 98-105) WITH THE APPROVER'S */
+/* USER ID AND MERGES THE SET INTO MBK.PRD.PRD.CHANGES(+1).          */
+/* THE EXEC REFUSES 'A' ON A SET YOU KEYED (FOUR EYES).              */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2013-01-21 PDQ  FROM THE COMMON APPROVAL QUEUE                    */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - PRODUCT CHANGE SETS FOR APPROVAL -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Line commands:%S+review   %A+approve   %R+reject          Sets pending@ACOUNT+
++You cannot approve a set you keyed.  Check every card against the signed
++form or CR before approving - the set is applied exactly as keyed.
++
+%S Change ref   Keyed by Date     Time   Product    Cards Description
+%- ------------ -------- -------- ------ ---------- ----- ----------------------
+)MODEL ROWS(SCAN)
+_Z#AREF        #AUSER   #ADATE   #ATIME #APROD    @ACNT +#ADESC                +
+)INIT
+  .ZVARS = '(ASEL)'
+  .HELP  = MBKPRDH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  &ASEL = ' '
+)PROC
+  IF (&ZTDSELS NE 0000)
+     VER (&ASEL,LIST,S,A,R)
+  VPUT (AMT) PROFILE
+)END

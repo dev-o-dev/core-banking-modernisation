@@ -1,0 +1,65 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKFX2                                                 */
+/* TITLE    : FX RATE TABLE - CUSTOMER MARGIN TIERS                  */
+/* EXEC     : FXMNT (ADD_CCY, TIERS_CCY)                             */
+/*-------------------------------------------------------------------*/
+/* FXR-MARGIN-TIER OCCURS 4:                                         */
+/*   TnUP  FXR-TIER-GBP-UPTO   S9(11)V99 COMP-3  STERLING AMOUNT     */
+/*   TnBP  FXR-TIER-MARGIN-BP  S9(4)     COMP-3  BASIS POINTS        */
+/* THE CUSTOMER RATE IS MID * (1 - BP/10000) WHEN THE BANK SELLS     */
+/* CURRENCY, MID * (1 + BP/10000) WHEN IT BUYS. TIER 4 IS OPEN ENDED */
+/* (KEY MAX). MARGINS MAY NOT RISE WITH THE AMOUNT.                  */
+/*-------------------------------------------------------------------*/
+/* 2011-05-09 JNB  ORIGINAL                                          */
+/* 2018-02-05 RKS  "POUNDS NOT PENCE" REMINDER (INC 2018/0119)       */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  $ TYPE(TEXT)   INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - FX MARGIN TIERS -/-/-
+%Command ===>_ZCMD                                                             +
++
++   Currency#FXCCY+ #FXNAME              +
++
+%   Tier   Sterling amount up to          Margin (basis points)
+%   ----   -------------------------      ---------------------
++     1   %===>_T1UP            +         %===>_T1BP+
++     2   %===>_T2UP            +         %===>_T2BP+
++     3   %===>_T3UP            +         %===>_T3BP+
++     4   %===>_T4UP            +         %===>_T4BP+   (key%MAX+for tier 4)
++
+$   Amounts are in POUNDS (1000.00 = one thousand pounds), not pence.
++   100 basis points = 1%.  Treasury procedure TO-14 defaults:
++       up to 1,000 300bp / 10,000 200bp / 50,000 120bp / above 80bp
++
++   Amounts must ascend; margins must not rise as the amount rises;
++   no margin above 2000bp.  The margin applies to the%whole+deal,
++   chosen by the deal's sterling amount (not banded).
++
++   %ENTER+to continue,%PF3+to go back without changing the tiers.
+)INIT
+  .HELP   = MBKFXH
+  .CURSOR = T1UP
+  IF (&T4UP = '99999999999.99')
+     &T4UP = MAX
+)PROC
+  VER (&T1UP,NB,ENUM)
+  VER (&T2UP,NB,ENUM)
+  VER (&T3UP,NB,ENUM)
+  VER (&T4UP,NB)
+  IF (&T4UP NE MAX)
+     VER (&T4UP,ENUM)
+  VER (&T1BP,NB,NUM)
+  VER (&T2BP,NB,NUM)
+  VER (&T3BP,NB,NUM)
+  VER (&T4BP,NB,NUM)
+  VER (&T1BP,RANGE,0,2000)
+  VER (&T2BP,RANGE,0,2000)
+  VER (&T3BP,RANGE,0,2000)
+  VER (&T4BP,RANGE,0,2000)
+)END

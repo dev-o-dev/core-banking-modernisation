@@ -1,0 +1,23 @@
+/*********************************************************************/
+/* PROCESS  : MBKCOPY                                                */
+/* TITLE    : CONNECT:DIRECT - GENERIC HOST TO REMOTE NODE COPY      */
+/* LIBRARY  : MBK.PRD.CDPROC                                         */
+/*-------------------------------------------------------------------*/
+/* SYMBOLICS                                                         */
+/*   &DSN    - LOCAL (MVS) DATASET NAME                              */
+/*   &RNODE  - REMOTE NODE NAME FROM THE NETMAP                      */
+/*   &RDSN   - REMOTE FILE NAME                                      */
+/*   &SYSOPT - REMOTE SYSOPTS (E.G. ':DATATYPE=TEXT:XLATE=YES:')     */
+/* A NON-ZERO COMPLETION RAISES A CA-7 ALERT VIA MESSAGE SVTM052I.   */
+/*********************************************************************/
+MBKCOPY  PROCESS  SNODE=&RNODE                                        -
+                  HOLD=NO RETAIN=NO                                   -
+                  PRTY=8 CLASS=2
+STEP01   COPY FROM (PNODE DSN=&DSN DISP=SHR)                          -
+                TO   (SNODE DSN=&RDSN DISP=RPL                        -
+                      SYSOPTS=&SYSOPT)
+         IF (STEP01 NE 0) THEN
+STEP02   RUN TASK (PGM=DMNOTIFY                                       -
+                   PARM=(C'MBKCOPY FAILED FOR &DSN'))                 -
+                   PNODE
+         EIF

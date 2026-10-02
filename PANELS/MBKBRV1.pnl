@@ -1,0 +1,103 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKBRV1                                                */
+/* TITLE    : BEREAVEMENT INSTRUCTION - CONTINGENCY ENTRY            */
+/* EXEC     : MBKBRV (NEW_INSTRUCTION)                               */
+/* BATCH    : CFDEC010 VIA CFDEC01 - DD BEREAVE (FB 200)             */
+/*-------------------------------------------------------------------*/
+/*   BVACT    BRV-ACTION          (1)       N P X R                  */
+/*   BVCIF    BRV-CIF-NO          (2-13)    BVCIF2 = SECOND KEYING   */
+/*   BVREF    BRV-REF             (14-25)   ALLOCATED FOR N          */
+/*   BVDOD    BRV-DATE-OF-DEATH   (26-33)   N ONLY                   */
+/*   BVNNAME  BRV-NOTIFIER-NAME   (34-73)   BVNREL (74-83)           */
+/*   BVESORT  BRV-EXEC-SORT-CODE  (84-89)   BVEACCT (90-97)  P ONLY  */
+/*   BVENAME  BRV-EXEC-NAME       (98-132)                           */
+/*   BVINDEM  BRV-INDEMNITY-IND   (133)     BVFREEZE (134)           */
+/* BRV-USER-ID (135-142) IS THE TSO USER.                            */
+/* COMMAND LIST - SHOW INSTRUCTIONS QUEUED FOR TONIGHT.              */
+/*-------------------------------------------------------------------*/
+/* 2011-02-14 AOS  ORIGINAL                                          */
+/* 2013-09-02 PDQ  FREEZE INTEREST                                   */
+/* 2018-11-12 RKS  CIF KEYED TWICE, CONFIRM FIELD                    */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON)  PAD('_')
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED)   CAPS(OFF) HILITE(REVERSE)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - BEREAVEMENT INSTRUCTION -/-/-
+%Command ===>_ZCMD                                                             +
+$BVCUT                                    +   (enter%LIST+to see the queue)
++   Action        %===>_Z+  %N+notify %P+probate/grant %X+settled %R+reversal
++   CIF number    %===>_BVCIF       +   again%===>_BVCIF2      +
++   Bereavement ref%==>_BVREF       +   (P X R - from the notification)
+%   Notification (N)+
++   Date of death %===>_BVDOD   +
++   Notifier name %===>!BVNNAME                                 +
++   Relationship  %===>_BVNREL    +   (SPOUSE PARTNER CHILD PARENT SIBLING
++                                      EXECUTOR SOLICITOR FUNERAL OTHER)
++   Freeze loan interest%===>_Z+       (Y = stop interest during the pause)
+%   Probate / letters of administration (P)+
++   Executor sort code%=>_BVESORT+  account%===>_BVEACCT +
++   Executor name %===>!BVENAME                            +
++   Release on indemnity (small estate, no grant)%===>_Z+  (team leader)
++
+#BVWARN                                                              +
++   Confirm       %===>_Z+   (Y when a warning is shown)
++
++   Check the name and date of birth on the customer record against the
++   death certificate%before+saving.  A notification stops all debits and
++   cancels standing orders and direct debits tonight.
+)INIT
+  .ZVARS  = '(BVACT BVFREEZE BVINDEM BVACK)'
+  .HELP   = MBKBRVH
+  .CURSOR = BVACT
+  IF (&BVWARN = ' ')
+     .ATTR(BVACK) = 'TYPE(OUTPUT) INTENS(NON)'
+  IF (&BVWARN NE ' ')
+     .CURSOR = BVACK
+)PROC
+  &ZCMD = TRUNC(&ZCMD,' ')
+  IF (&ZCMD = LIST)
+     EXIT
+  VER (&BVACT,NB,LIST,N,P,X,R)
+  VER (&BVCIF,NB,NUM)
+  VER (&BVCIF2,NB,NUM)
+  IF (&BVACT = N)
+     VER (&BVDOD,NB,PICT,'NNNNNNNN')
+     VER (&BVNNAME,NB)
+     VER (&BVNREL,NB,LIST,SPOUSE,PARTNER,CHILD,PARENT,SIBLING,EXECUTOR,
+          SOLICITOR,FUNERAL,OTHER)
+     VER (&BVFREEZE,NB,LIST,Y,N)
+  IF (&BVACT = P)
+     VER (&BVREF,NB)
+     VER (&BVESORT,NB,PICT,'NNNNNN')
+     VER (&BVEACCT,NB,PICT,'NNNNNNNN')
+     VER (&BVENAME,NB)
+     VER (&BVINDEM,NB,LIST,Y,N)
+  IF (&BVACT = X,R)
+     VER (&BVREF,NB)
+  *REXX(BVDOD,BVACT,ZEDSMSG,ZEDLMSG,ZRXRC,ZRXMSG)
+    /* DATE OF DEATH VALIDITY - SAME RULE AS MBKBRV VALID_DATE */
+    ZRXRC = 0
+    IF BVACT = 'N' THEN DO
+       PARSE VAR BVDOD Y 5 M 7 D
+       ML = WORD('31 28 31 30 31 30 31 31 30 31 30 31', M + 0)
+       IF M = 2 & Y // 4 = 0 & (Y//100 <> 0 | Y//400 = 0) THEN ML = 29
+       IF Y < 1900 | M < 1 | M > 12 | D < 1 | D > ML THEN DO
+          ZEDSMSG = 'Invalid date'
+          ZEDLMSG = 'Date of death' BVDOD 'is not a valid CCYYMMDD date.'
+          ZRXRC = 8
+          ZRXMSG = 'ISRZ001'
+       END
+    END
+  *ENDREXX
+  IF (&BVACK NE ' ')
+     VER (&BVACK,LIST,Y,N)
+)HELP
+  FIELD(BVACT)   PANEL(MBKBRVH)
+  FIELD(BVINDEM) PANEL(MBKBRVH)
+)END

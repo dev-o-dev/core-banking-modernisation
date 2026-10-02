@@ -1,0 +1,108 @@
+***********************************************************************
+* MAPSET   : DDMAP4                                                   *
+* TITLE    : DDA - BRANCH FUNDS HOLDS                                 *
+* PROGRAM  : DDSCRN4   TRANSACTION DD04                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(DDMAP4)    *
+*---------------------------------------------------------------------*
+* 2011-03-14 AOS  ORIGINAL VERSION (HOLDS PREVIOUSLY ON THE TELLER    *
+*                 SYSTEM ONLY - NO AUDIT, IA-09-031)                  *
+***********************************************************************
+DDMAP4   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+DDM04    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='DD04'
+         DFHMDF POS=(1,20),LENGTH=28,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  FUNDS HOLDS'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- KEY ---------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=10,ATTRB=(ASKIP,NORM),                X
+               INITIAL='SORT CODE:'
+SORTCD   DFHMDF POS=(3,12),LENGTH=6,ATTRB=(UNPROT,BRT,IC,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,19),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,22),LENGTH=8,ATTRB=(ASKIP,NORM),                X
+               INITIAL='ACCOUNT:'
+ACCTNO   DFHMDF POS=(3,31),LENGTH=8,ATTRB=(UNPROT,BRT,FSET),           X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,40),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,44),LENGTH=8,ATTRB=(ASKIP,NORM),                X
+               INITIAL='PRODUCT:'
+PRODCD   DFHMDF POS=(3,53),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(4,1),LENGTH=9,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='CUSTOMER:'
+CUSTNM   DFHMDF POS=(4,12),LENGTH=40,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(5,1),LENGTH=7,ATTRB=(ASKIP,NORM),                 X
+               INITIAL='LEDGER:'
+LEDGER   DFHMDF POS=(5,12),LENGTH=17,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(5,31),LENGTH=10,ATTRB=(ASKIP,NORM),               X
+               INITIAL='AVAILABLE:'
+AVAIL    DFHMDF POS=(5,42),LENGTH=17,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(5,61),LENGTH=5,ATTRB=(ASKIP,NORM),                X
+               INITIAL='HELD:'
+TOTHLD   DFHMDF POS=(5,67),LENGTH=13,ATTRB=(ASKIP,BRT)
+*        ---- ACTIVE HOLDS -----------------------------------------
+         DFHMDF POS=(7,1),LENGTH=79,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='SEQ  ST RSN          AMOUNT PLACED   EXPIRES  BX
+               Y       NARRATIVE'
+HLD1     DFHMDF POS=(8,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD2     DFHMDF POS=(9,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD3     DFHMDF POS=(10,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD4     DFHMDF POS=(11,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD5     DFHMDF POS=(12,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD6     DFHMDF POS=(13,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD7     DFHMDF POS=(14,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD8     DFHMDF POS=(15,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD9     DFHMDF POS=(16,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+HLD10    DFHMDF POS=(17,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+*        ---- ACTION --------------------------------------------------
+         DFHMDF POS=(19,1),LENGTH=27,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ACTION (P=PLACE R=RELEASE):'
+ACTION   DFHMDF POS=(19,29),LENGTH=1,ATTRB=(UNPROT,BRT,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(19,31),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(19,33),LENGTH=4,ATTRB=(ASKIP,NORM),               X
+               INITIAL='SEQ:'
+HSEQ     DFHMDF POS=(19,38),LENGTH=4,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(19,43),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(19,45),LENGTH=7,ATTRB=(ASKIP,NORM),               X
+               INITIAL='AMOUNT:'
+HAMT     DFHMDF POS=(19,53),LENGTH=13,ATTRB=(UNPROT,NORM,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(19,67),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,1),LENGTH=7,ATTRB=(ASKIP,NORM),                X
+               INITIAL='REASON:'
+HRSN     DFHMDF POS=(20,9),LENGTH=4,ATTRB=(UNPROT,NORM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(20,14),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,16),LENGTH=7,ATTRB=(ASKIP,NORM),               X
+               INITIAL='EXPIRY:'
+HEXP     DFHMDF POS=(20,24),LENGTH=8,ATTRB=(UNPROT,NUM,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(20,33),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,35),LENGTH=10,ATTRB=(ASKIP,NORM),              X
+               INITIAL='NARRATIVE:'
+HNARR    DFHMDF POS=(20,46),LENGTH=33,ATTRB=(UNPROT,NORM,FSET),        X
+               HILIGHT=UNDERLINE
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=73,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=PROCESS PF3=EXIT PF5=REFRESH PF12=CF02   X
+               REASONS: CHQ LEGL FRD OTHR'
+*
+         DFHMSD TYPE=FINAL
+         END

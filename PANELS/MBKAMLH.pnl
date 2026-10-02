@@ -1,0 +1,40 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKAMLH                                                */
+/* TITLE    : HELP - AML RULE PARAMETERS                             */
+/*-------------------------------------------------------------------*/
+/* 2009-09-14 AOS  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- AML RULE PARAMETERS -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++RGAML010 checks yesterday's hard postings against seven rules and raises
++alerts for the MLRO team.  The defaults are in the program; this dialog
++maintains overrides in MBK.PRD.CNTL(AMLRULES).
++
+]Rules+
++  %R01+large cash: one cash credit >= threshold
++  %R02+structuring: >= count cash credits each below R01, total >= threshold
++  %R03+rapid movement: credits >= threshold and 90% out the same day
++  %R04+high risk customer: any transaction >= threshold
++  %R05+dormant reactivation: debits >= threshold within 30 days
++  %R06+international: SWIFT out total >= threshold
++  %R07+velocity: >= count Faster Payments out (threshold not used)
++
+]Who may change them+
++   Anyone with AML authority may view.  Only the MLRO and nominated
++   deputy (level M) may SAVE, quoting the decision reference.  Switching
++   a rule off or raising a threshold above 150% of default needs a second
++   confirmation and is reported to the Financial Crime Committee.
++
+]RERUN+  resubmits RGAML01 (operations override needed) after a change
++   that must apply to today's postings.  Alerts are one per account per
++   rule per day, so a rerun does not duplicate alerts.
+)PROC
+  &ZUP = MBKMENUH
+)END

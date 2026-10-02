@@ -1,0 +1,95 @@
+***********************************************************************
+* MAPSET   : FXMAPS                                                   *
+* TITLE    : FX - BRANCH RATE BOARD AND QUOTE                         *
+* PROGRAM  : FXSCRN1   TRANSACTION FX01                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(FXMAPS)    *
+*---------------------------------------------------------------------*
+* 2011-05-16 JNB  ORIGINAL VERSION (REPLACES THE PRINTED RATE         *
+*                 SHEET FAXED TO BRANCHES AT 08:00)                   *
+***********************************************************************
+FXMAPS   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+FXM01    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='FX01'
+         DFHMDF POS=(1,20),LENGTH=39,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  FOREIGN EXCHANGE RATES'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- RATE BOARD --------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=79,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='CCY NAME                    WE BUY (CUST SELLS)X
+                 WE SELL (CUST BUYS) STATUS'
+FXL1     DFHMDF POS=(4,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL2     DFHMDF POS=(5,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL3     DFHMDF POS=(6,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL4     DFHMDF POS=(7,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL5     DFHMDF POS=(8,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL6     DFHMDF POS=(9,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL7     DFHMDF POS=(10,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL8     DFHMDF POS=(11,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL9     DFHMDF POS=(12,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL10    DFHMDF POS=(13,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL11    DFHMDF POS=(14,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL12    DFHMDF POS=(15,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL13    DFHMDF POS=(16,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+FXL14    DFHMDF POS=(17,1),LENGTH=79,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(19,1),LENGTH=5,ATTRB=(ASKIP,NORM),                X
+               INITIAL='PAGE:'
+FXPAGE   DFHMDF POS=(19,7),LENGTH=3,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(19,20),LENGTH=12,ATTRB=(ASKIP,NORM),              X
+               INITIAL='RATES AS AT:'
+FXASAT   DFHMDF POS=(19,33),LENGTH=20,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(19,60),LENGTH=10,ATTRB=(ASKIP,NORM),              X
+               INITIAL='MARGIN BP:'
+QMARG    DFHMDF POS=(19,71),LENGTH=4,ATTRB=(ASKIP,BRT)
+*        ---- QUOTE ---------------------------------------------------
+         DFHMDF POS=(20,1),LENGTH=4,ATTRB=(ASKIP,NORM),                X
+               INITIAL='CCY:'
+QCCY     DFHMDF POS=(20,6),LENGTH=3,ATTRB=(UNPROT,BRT,IC,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(20,10),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,11),LENGTH=10,ATTRB=(ASKIP,NORM),              X
+               INITIAL='DIR (S/B):'
+QDIR     DFHMDF POS=(20,22),LENGTH=1,ATTRB=(UNPROT,BRT,FSET),          X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(20,24),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,25),LENGTH=8,ATTRB=(ASKIP,NORM),               X
+               INITIAL='GBP AMT:'
+QGBP     DFHMDF POS=(20,34),LENGTH=13,ATTRB=(UNPROT,NORM,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(20,48),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(20,49),LENGTH=8,ATTRB=(ASKIP,NORM),               X
+               INITIAL='CCY AMT:'
+QCCYA    DFHMDF POS=(20,58),LENGTH=13,ATTRB=(UNPROT,NORM,FSET),        X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(20,72),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(21,1),LENGTH=14,ATTRB=(ASKIP,NORM),               X
+               INITIAL='CUSTOMER RATE:'
+QRATE    DFHMDF POS=(21,16),LENGTH=12,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(21,30),LENGTH=11,ATTRB=(ASKIP,NORM),              X
+               INITIAL='RESULT GBP:'
+QRGBP    DFHMDF POS=(21,42),LENGTH=13,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(21,57),LENGTH=4,ATTRB=(ASKIP,NORM),               X
+               INITIAL='CCY:'
+QRCCY    DFHMDF POS=(21,62),LENGTH=13,ATTRB=(ASKIP,BRT)
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=67,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=QUOTE PF3=EXIT PF7=BACK PF8=FORWARD   DIRX
+                S=CUSTOMER BUYS CCY'
+*
+         DFHMSD TYPE=FINAL
+         END

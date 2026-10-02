@@ -1,0 +1,39 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKBRV2                                                */
+/* TITLE    : BEREAVEMENT - INSTRUCTIONS QUEUED FOR TONIGHT          */
+/* EXEC     : MBKBRV (QUEUE_LIST) - TABLE BRVQ                       */
+/*-------------------------------------------------------------------*/
+/* LINE COMMAND D DELETES AN INSTRUCTION BEFORE IT IS RELEASED (OWN  */
+/* ITEMS, OR ANY ITEM FOR A TEAM LEADER). ONCE RELEASED IT CAN ONLY  */
+/* BE UNDONE WITH AN R (REVERSAL) INSTRUCTION.                       */
+/*-------------------------------------------------------------------*/
+/* 2013-01-21 PDQ  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - BEREAVEMENT QUEUE -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Line command:%D+delete (before release only)              Queued@QCOUNT+
++
+%S Reference    Keyed by Time  A CIF number   DoD      Notifier / executor
+%- ------------ -------- ----- - ------------ -------- -------------------------
+)MODEL ROWS(SCAN)
+_Z#QREF        #QUSER   #QTIME#Z#QCIF        #QDOD    #QNAME                   +
+)INIT
+  .ZVARS = '(QSEL QACT)'
+  .HELP  = MBKBRVH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  &QSEL = ' '
+)PROC
+  IF (&ZTDSELS NE 0000)
+     VER (&QSEL,LIST,D)
+  VPUT (AMT) PROFILE
+)END

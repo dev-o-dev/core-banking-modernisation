@@ -1,0 +1,65 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKAML1                                                */
+/* TITLE    : AML TRANSACTION MONITORING - RULE PARAMETERS           */
+/* EXEC     : MBKAMLRP - TABLE AMLRULE                               */
+/* BATCH    : RGAML010 VIA RGAML01 - DD RULEPARM (CNTL(AMLRULES))    */
+/*-------------------------------------------------------------------*/
+/* TWO LINES PER RULE:                                               */
+/*   RID RDESC RSEV          RULE, DESCRIPTION, ALERT SEVERITY       */
+/*   DTHR DCNT DACT          RGAML010 DEFAULT (WS-RULE-VALUES)       */
+/*   CTHR CCNT CACT          IN FORCE (AMLRULES MEMBER)              */
+/*   NTHR NCNT NACT          NEW VALUE - BLANK = NO CHANGE (INPUT)   */
+/*   RMSG                    EXEC MESSAGE                            */
+/* COMMANDS: SAVE (MLRO ONLY)  RESET  RERUN  CANCEL                  */
+/* NEW COLUMNS ARE OUTPUT ONLY FOR NON-MLRO USERS (AMMODE).          */
+/*-------------------------------------------------------------------*/
+/* 2009-09-14 AOS  ORIGINAL                                          */
+/* 2012-04-23 PDQ  DEFAULT / IN FORCE / NEW COLUMNS                  */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('.')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED)   CAPS(OFF)
+  ] TYPE(OUTPUT) INTENS(HIGH) COLOR(WHITE) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - AML RULE PARAMETERS -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++Mode]AMMODE   +  In force since#AMUPD                                 +
++Commands:%SAVE RESET RERUN CANCEL+   Blank "new" = unchanged.  Amounts in GBP.
++
+%Rule Description                       Sev
+%   Default         Cnt A  In force        Cnt A  New             Cnt A
+%   --------------- --- -  --------------- --- -  --------------- --- -
+)MODEL ROWS(ALL)
+]RID ]RDESC                          ]Z$RMSG                              +
++  #DTHR           #DCNT#Z #CTHR           @CCNT#Z _NTHR           _NCNT_Z+
+)INIT
+  .ZVARS = '(RSEV DACT CACT NACT)'
+  .HELP  = MBKAMLH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  IF (&AMMODE NE CHANGE)
+     .ATTR(NTHR) = 'TYPE(OUTPUT) INTENS(NON)'
+     .ATTR(NCNT) = 'TYPE(OUTPUT) INTENS(NON)'
+     .ATTR(NACT) = 'TYPE(OUTPUT) INTENS(NON)'
+)PROC
+  &ZCMD = TRUNC(&ZCMD,' ')
+  IF (&ZCMD NE ' ')
+     VER (&ZCMD,LIST,SAVE,RESET,RERUN,CANCEL)
+  IF (&NTHR NE ' ')
+     VER (&NTHR,ENUM)
+  IF (&NCNT NE ' ')
+     VER (&NCNT,NUM)
+     VER (&NCNT,RANGE,1,999)
+  IF (&NACT NE ' ')
+     VER (&NACT,LIST,Y,N)
+  VPUT (AMT) PROFILE
+)HELP
+  FIELD(NTHR) PANEL(MBKAMLH)
+  FIELD(NCNT) PANEL(MBKAMLH)
+  FIELD(NACT) PANEL(MBKAMLH)
+)END

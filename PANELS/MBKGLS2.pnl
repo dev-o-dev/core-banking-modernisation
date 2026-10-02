@@ -1,0 +1,40 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKGLS2                                                */
+/* TITLE    : GL SUSPENSE - WRITE-OFFS AWAITING APPROVAL             */
+/* EXEC     : MBKGLSUS (APPROVE_LIST) - TABLE GLSAPPR                */
+/*-------------------------------------------------------------------*/
+/* LINE COMMANDS  A APPROVE   R REJECT                               */
+/* THE EXEC RE-READS THE ITEM FROM MBK.GLSUSP AT APPROVAL - IT MAY   */
+/* HAVE BEEN CLEARED SINCE IT WAS KEYED.                             */
+/*-------------------------------------------------------------------*/
+/* 2008-06-23 KLM  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF) JUST(RIGHT)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - SUSPENSE WRITE-OFFS FOR APPROVAL -/-/-
+%Command ===>_ZCMD                                            %Scroll ===>_AMT +
++
++Line commands:%A+approve  %R+reject                      Pending@ACOUNT+
++
+%S Ref          Keyed by Date     Susp ID   Journal ref          Amount
+%- ------------ -------- -------- --------- ---------------- ----------
+)MODEL ROWS(SCAN)
+_Z#AREF        #AUSER   #ADATE   #AID      #AJREF           @AAMT      +
++  Notes#ANOTE                                                       +
+)INIT
+  .ZVARS = '(ASEL)'
+  .HELP  = MBKGLSH
+  IF (&AMT = ' ')
+     &AMT = PAGE
+  &ASEL = ' '
+)PROC
+  IF (&ZTDSELS NE 0000)
+     VER (&ASEL,LIST,A,R)
+  VPUT (AMT) PROFILE
+)END

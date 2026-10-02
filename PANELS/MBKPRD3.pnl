@@ -1,0 +1,62 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRD3                                                */
+/* TITLE    : PRODUCT CHANGE SET - CONFIRM BEFORE SAVING              */
+/* EXEC     : MBKPRDCH                                               */
+/*-------------------------------------------------------------------*/
+/* PRRATEW = Y WHEN THE SET CHANGES CR-TIER-RATE OR CR-BONUS-RATE ON */
+/* AN EXISTING PRODUCT - THE USER MUST GIVE A REASON (PRRSN) WHY     */
+/* MBKRTCH (WHICH SENDS CUSTOMER NOTICES) IS NOT BEING USED.         */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2009-10-01 AOS  RATE WARNING (PIR 2009/301)                       */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON)  PAD('_')
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+  $ TYPE(OUTPUT) INTENS(HIGH) COLOR(RED) HILITE(REVERSE) CAPS(OFF)
+  ~ TYPE(OUTPUT) INTENS(LOW)  COLOR(RED) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - CONFIRM CHANGE SET -/-/-
+%Command ===>_ZCMD                                                             +
++
++   Product          #PRPROD    +
++   Action           #Z+
++   Effective date   #PREFF   +
++   Cards in the set #PRCARDS+
++   Description      #PRDESC                 +
++
++   All cards have passed the PRMNT010 field checks.  The set will be saved
++   for approval by a%second+user with approval authority.
++
++
+$WARNTXT                                                               +
+~WARN1                                                                  +
+~WARN2                                                                  +
++ Reason%===>!PRRSN                                            +
++
++   Save the change set for approval %===>_Z+  (Y or N)
+)INIT
+  .ZVARS  = '(PRACT PRCONF)'
+  .CURSOR = PRCONF
+  .HELP   = MBKPRDH
+  &PRCONF = ' '
+  &WARNTXT = ' '
+  &WARN1   = ' '
+  &WARN2   = ' '
+  IF (&PRRATEW NE Y)
+     .ATTR(PRRSN) = 'TYPE(OUTPUT) INTENS(NON)'
+  IF (&PRRATEW = Y)
+     &WARNTXT = ' WARNING - CREDIT RATE CHANGE ON AN EXISTING PRODUCT'
+     &WARN1 = 'A reduction must go through option 2 so customers get notice.'
+     &WARN2 = 'Give the reason this set is used instead (e.g. INCREASE ONLY):'
+  IF (&PRRATEW = Y)
+     .CURSOR = PRRSN
+)PROC
+  VER (&PRCONF,NB,LIST,Y,N)
+  IF (&PRRATEW = Y)
+     IF (&PRCONF = Y)
+        VER (&PRRSN,NB)
+)END

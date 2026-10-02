@@ -1,0 +1,104 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKFX1                                                 */
+/* TITLE    : FX RATE TABLE - CURRENCY DETAILS                       */
+/* EXEC     : FXMNT                                                  */
+/* FILE     : MBK.PRD.FX.RATES (COPYBOOK FXRATREC) VIA JOB FXMNT01   */
+/*-------------------------------------------------------------------*/
+/* FXMODE (SET BY THE EXEC) CONTROLS WHICH FIELDS ARE INPUT:         */
+/*   ' '      ONLY CURRENCY AND ACTION                               */
+/*   DISPLAY  NOTHING (BROWSE THE CURRENT RECORD)                    */
+/*   ADD      NAME DECIMALS MID TOLERANCE MAX DEAL SWIFT CARD        */
+/*   AMEND    NAME DECIMALS TOLERANCE MAX DEAL SWIFT CARD            */
+/*   STATUS   STATUS ONLY                                            */
+/*   TIERS    (PANEL MBKFX2 IS USED INSTEAD)                         */
+/* MID RATE IS ONLY KEYED ON ADD - RATE CORRECTIONS ARE TREASURY     */
+/* FORCE CARDS LOADED BY FXRAT010.                                   */
+/*-------------------------------------------------------------------*/
+/* 2011-05-09 JNB  ORIGINAL                                          */
+/* 2012-11-26 JNB  SWIFT / CARD ALLOWED                              */
+/* 2016-06-27 PDQ  TOLERANCE % PER CURRENCY                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  @ TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - FX CURRENCY MAINTENANCE -/-/-
+%Command ===>_ZCMD                                                             +
++                                                            Mode@FXMODE  +
++   Currency (ISO)  %===>_Z  +     Action%===>_Z+  %D+display %A+add %M+amend
++                                                %T+margin tiers %S+status
++---------------------------------------------------------------------------
++   Name            %===>_FXNAME              +
++   Decimals        %===>_Z+       (0 JPY, 2 most, 3 KWD BHD)
++   Status          %===>_Z+       %A+active %H+held %S+suspended
++   Mid rate        %===>_FXMID       +   units per 1 GBP (add only)
++   Previous mid         #FXPREV      +
++   Rate date / time     #RTDATE  + #RTTIME+  Fixing#FXFIXID +
++   Tolerance %     %===>_FXTOL+   max move between fixings before HOLD
++   Max deal (GBP)  %===>_FXMAX          +
++   SWIFT allowed   %===>_Z+       Card allowed%===>_Z+
++   Last maintained      #FXMDATE + by#FXMUSER +
++---------------------------------------------------------------------------
++   New currencies are added%held+.  They become active at the first fixing
++   that passes the tolerance check, or when you set status%A+here.
++   Changes are applied by batch job%FXMNT01+(IDCAMS) - you will be asked to
++   submit it.  The online quote service sees the change when it completes.
+)INIT
+  .ZVARS = '(FXCCY FXACT FXDEC FXSTAT FXSWIFT FXCARD)'
+  .HELP  = MBKFXH
+  .CURSOR = FXCCY
+  IF (&FXACT = ' ')
+     &FXACT = D
+  /* EVERYTHING OUTPUT UNLESS THE MODE MAKES IT INPUT */
+  .ATTR(FXNAME)  = 'TYPE(OUTPUT)'
+  .ATTR(FXDEC)   = 'TYPE(OUTPUT)'
+  .ATTR(FXSTAT)  = 'TYPE(OUTPUT)'
+  .ATTR(FXMID)   = 'TYPE(OUTPUT)'
+  .ATTR(FXTOL)   = 'TYPE(OUTPUT)'
+  .ATTR(FXMAX)   = 'TYPE(OUTPUT)'
+  .ATTR(FXSWIFT) = 'TYPE(OUTPUT)'
+  .ATTR(FXCARD)  = 'TYPE(OUTPUT)'
+  IF (&FXMODE = ADD,AMEND)
+     .ATTR(FXNAME)  = 'TYPE(INPUT)'
+     .ATTR(FXDEC)   = 'TYPE(INPUT)'
+     .ATTR(FXTOL)   = 'TYPE(INPUT)'
+     .ATTR(FXMAX)   = 'TYPE(INPUT)'
+     .ATTR(FXSWIFT) = 'TYPE(INPUT)'
+     .ATTR(FXCARD)  = 'TYPE(INPUT)'
+     .ATTR(FXCCY)   = 'TYPE(OUTPUT)'
+     .ATTR(FXACT)   = 'TYPE(OUTPUT)'
+     .CURSOR = FXNAME
+  IF (&FXMODE = ADD)
+     .ATTR(FXMID)   = 'TYPE(INPUT)'
+  IF (&FXMODE = STATUS)
+     .ATTR(FXSTAT)  = 'TYPE(INPUT)'
+     .ATTR(FXCCY)   = 'TYPE(OUTPUT)'
+     .ATTR(FXACT)   = 'TYPE(OUTPUT)'
+     .CURSOR = FXSTAT
+  IF (&FXMODE = DISPLAY)
+     .ATTR(FXCCY)   = 'TYPE(OUTPUT)'
+     .ATTR(FXACT)   = 'TYPE(OUTPUT)'
+)PROC
+  IF (&FXMODE = ' ')
+     VER (&FXCCY,NB,ALPHAB)
+     VER (&FXCCY,LEN,'=',3)
+     VER (&FXACT,NB,LIST,D,A,M,T,S)
+  IF (&FXMODE = ADD,AMEND)
+     VER (&FXNAME,NB)
+     VER (&FXDEC,NB,RANGE,0,3)
+     VER (&FXTOL,NB,ENUM)
+     VER (&FXMAX,NB,ENUM)
+     VER (&FXSWIFT,NB,LIST,Y,N)
+     VER (&FXCARD,NB,LIST,Y,N)
+  IF (&FXMODE = ADD)
+     VER (&FXMID,NB,ENUM)
+  IF (&FXMODE = STATUS)
+     VER (&FXSTAT,NB,LIST,A,H,S)
+)HELP
+  FIELD(FXTOL)  PANEL(MBKFXH)
+  FIELD(FXSTAT) PANEL(MBKFXH)
+)END

@@ -1,0 +1,41 @@
+)PANEL KEYLIST(ISRHELP,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKCGRH                                                */
+/* TITLE    : HELP - CHARGE REFUNDS                                  */
+/*-------------------------------------------------------------------*/
+/* 2007-08-20 JNB  ORIGINAL                                          */
+/* 2015-03-02 PDQ  FOS / HARDSHIP                                    */
+/*********************************************************************/
+  % TYPE(TEXT) INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT) INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  ] TYPE(TEXT) INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%TUTORIAL -/-/- CHARGE REFUNDS -/-/- TUTORIAL
+%Command ===>_ZCMD                                                             +
++
++A refund reverses all or part of one charge that has been applied (a row
++in MBK.CHGHIST).  Identify the charge exactly - sort code, account, period
++end, charge type and item sequence - from the Charge History enquiry.
++
+]Reason codes+
++  %GDWL+goodwill            %CMPL+complaint upheld (case ref required)
++  %BERR+bank error           %FOSD+Financial Ombudsman decision (FOS... ref)
++  %HARD+financial hardship - collections referral (COL... ref)
++
+]Amount+
++   Key the refund in pounds.  Zero means "whatever is left of the charge
++   after earlier refunds" - CGREF010 works it out.  Refunds can never take
++   the total refunded above the charge.
++
+]Approval+
++   Requester and approver must be different users.  Over 250.00 (or a
++   zero / balance refund) the approver must be a team leader listed in
++   CGREF010 (CRTL0001 CRTL0002 CRTL0004 CRTL0007 CRMGR001 CRMGR002).
++
+]Cut-off+
++   Approved refunds are released to the batch from option R, by 21:30.
++   Releasing twice in a day is safe - the second release is merged.
+)PROC
+  &ZUP = MBKMENUH
+)END

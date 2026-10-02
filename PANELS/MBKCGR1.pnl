@@ -1,0 +1,76 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKCGR1                                                */
+/* TITLE    : CHARGE REFUND REQUEST                                  */
+/* EXEC     : MBKCGREF (NEW_REQUEST)                                 */
+/* BATCH    : CGREF010 VIA CGREF01 - DD REFUNDIN (FB 120)            */
+/*-------------------------------------------------------------------*/
+/*   CRSORT  RFQ-SORT-CODE    (1-6)    CRACCT RFQ-ACCT-NO    (7-14)  */
+/*   CRPEND  RFQ-PERIOD-END   (15-22)  CRTYPE RFQ-CHARGE-TYPE(23-26) */
+/*   CRSEQ   RFQ-ITEM-SEQ     (27-32)  CRAMT  RFQ-AMOUNT     (33-43) */
+/*   CRRSN   RFQ-REASON-CD    (44-47)  CRCASE RFQ-CASE-REF   (64-75) */
+/*   CRNARR  RFQ-NARRATIVE    (76-110)                               */
+/* REQUESTER (48-55) IS THE TSO USER; APPROVER (56-63) IS STAMPED    */
+/* AT APPROVAL. AMOUNT 0 = REFUND THE REMAINING BALANCE OF THE       */
+/* CHARGE (NEEDS A LEVEL 2 APPROVER - THE AMOUNT IS NOT KNOWN).      */
+/*-------------------------------------------------------------------*/
+/* 2007-08-20 JNB  ORIGINAL                                          */
+/* 2008-04-07 JNB  LEVEL 2 NOTE                                      */
+/* 2015-03-02 PDQ  FOS / COLLECTIONS CASE REFERENCES                 */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON)  PAD('_')
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - CHARGE REFUND REQUEST -/-/-
+%Command ===>_ZCMD                                                             +
++
++  Copy the charge details from the Charge History enquiry (CICS CGHI).
++
++   Sort code         %===>_CRSORT+       Account number%===>_CRACCT  +
++   Charge period end %===>_CRPEND  +     (CCYYMMDD as on charge history)
++   Charge type       %===>_CRTYPE+       (e.g. MFEE AODF UODF UPIT PDIT)
++   Item sequence     %===>_CRSEQ +
++   Refund amount     %===>_CRAMT        +  (0 = remaining balance)
++   Reason            %===>_CRRSN+        %GDWL+goodwill  %CMPL+complaint
++                                         %BERR+bank error %FOSD+ombudsman
++                                         %HARD+financial hardship
++   Case reference    %===>_CRCASE      +  (CMPL/FOS.../COL... as needed)
++   Narrative         %===>!CRNARR                             +
++                          (appears on the customer's statement)
++
+#CRNOTE                                        +
++
++   Controls (CR-PROC-11): a different user must approve.  Refunds over
++%250.00+, or for the remaining balance, need a team leader (level 2).
++   A refund to a closed account is rejected - pay by cheque from the
++   complaints ledger instead.
++
++   %ENTER+saves the request (account and case are kept for the next one).
++   %PF3+  ends.
+)INIT
+  .HELP   = MBKCGRH
+  .CURSOR = CRSORT
+  IF (&CRSORT NE ' ')
+     .CURSOR = CRPEND
+)PROC
+  VER (&CRSORT,NB,PICT,'NNNNNN')
+  VER (&CRACCT,NB,PICT,'NNNNNNNN')
+  VER (&CRPEND,NB,PICT,'NNNNNNNN')
+  VER (&CRTYPE,NB,INCLUDE,ALPHA,NUM)
+  VER (&CRSEQ,NB,NUM)
+  IF (&CRAMT = ' ')
+     &CRAMT = 0
+  VER (&CRAMT,ENUM)
+  VER (&CRRSN,NB,LIST,GDWL,CMPL,BERR,FOSD,HARD)
+  IF (&CRRSN = FOSD,HARD,CMPL)
+     VER (&CRCASE,NB)
+  VER (&CRNARR,NB)
+)HELP
+  FIELD(CRRSN)  PANEL(MBKCGRH)
+  FIELD(CRAMT)  PANEL(MBKCGRH)
+  FIELD(CRCASE) PANEL(MBKCGRH)
+)END

@@ -1,0 +1,31 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRD4                                                */
+/* TITLE    : PRODUCT PARAMETER FIELD NAMES (POP-UP LIST)            */
+/* EXEC     : MBKPRDCH (SHOW_FIELD_LIST) - TABLE PRDFLIST            */
+/*-------------------------------------------------------------------*/
+/* BUILT FROM THE EXEC'S COPY OF PRMNT010 WS-FIELD-VALUES.           */
+/*   LNAME  FIELD NAME     LTYPE  RATE AMOUNT NUMBER CODE TEXT       */
+/*   LOCC   OCCURRENCES    LCODES VALID CODES / MAXIMUM LENGTH       */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD(' ')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+)BODY WINDOW(58,18)
+%Command ===>_ZCMD                          %Scroll ===>_AMT +
++Rates are % p.a. (3.2500), amounts in pounds (1500.00).
+%Field name               Type   Occ  Codes / length
+%------------------------ ------ ---  ---------------
+)MODEL ROWS(ALL)
+#LNAME                   #LTYPE #LOCC#LCODES         +
+)INIT
+  &ZWINTTL = 'Product parameter fields'
+  .HELP    = MBKPRDH2
+  IF (&AMT = ' ')
+     &AMT = PAGE
+)PROC
+  VPUT (AMT) PROFILE
+)END

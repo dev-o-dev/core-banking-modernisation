@@ -1,0 +1,33 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKGLS3                                                */
+/* TITLE    : GL SUSPENSE - CUT-OFF RELEASE CONFIRMATION             */
+/* EXEC     : MBKGLSUS (RELEASE)                                     */
+/*-------------------------------------------------------------------*/
+/* 2013-01-21 PDQ  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY WINDOW(64,14)
+%Command ===>_ZCMD                                              +
++
++Instructions to release#RLCOUNT+
++   clearings (C)        #RLCLR+
++   write-offs (W)       #RLWO +
++Last release business date#RLLAST  +   Merge#Z+
++
++Written to MBK.PRD.GL.SUSP.CLEARED(+1) for tonight's
++GLSUS01 (after GLFEED01).  Items are marked cleared in
++MBK.GLSUSP when the job runs, not now.
++
++Release now%===>_Z+ (Y/N)
+)INIT
+  &ZWINTTL = 'Release suspense instructions'
+  .ZVARS   = '(RLMERGE RLCONF)'
+  .CURSOR  = RLCONF
+  .HELP    = MBKGLSH
+)PROC
+  VER (&RLCONF,NB,LIST,Y,N)
+)END

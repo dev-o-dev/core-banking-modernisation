@@ -1,0 +1,100 @@
+)PANEL KEYLIST(ISRSAB,ISR)
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKPRD1                                                */
+/* TITLE    : PRODUCT PARAMETER CHANGE SET - HEADER                  */
+/* EXEC     : MBKPRDCH (NEW_CHANGE_SET)                              */
+/* BATCH    : PRMNT010 VIA PRMNT01 - COPYBOOK PRCHGREC               */
+/*-------------------------------------------------------------------*/
+/* REPLACES PAPER FORM PC/17 (SECTION A). ONE CHANGE SET = ONE       */
+/* PRODUCT, ONE ACTION, ONE EFFECTIVE DATE.                          */
+/*   PRPROD   PCH-PROD-CD         (COLS 16-25)                       */
+/*   PRACT    PCH-ACTION          (COL  26)  A U W C                 */
+/*   PREFF    PCH-EFFECTIVE-DATE  (COLS 82-89) CCYYMMDD              */
+/*   PRNAME   VALUE OF THE 'A' CARD (NEW PRODUCT SHORT NAME)         */
+/*   PRDESC   PENDING HEADER DESCRIPTION ONLY - NOT ON THE CARDS     */
+/*   PRBDATE  BUSINESS DATE (OUTPUT)                                 */
+/* THE CHANGE REF (PCH-CHANGE-REF) IS ALLOCATED WHEN THE SET IS      */
+/* SAVED - IT IS NOT KEYED.                                          */
+/*-------------------------------------------------------------------*/
+/* 2007-02-12 JNB  ORIGINAL                                          */
+/* 2016-03-07 PDQ  PANEL REXX DATE CHECK (BAD DATES WERE ONLY CAUGHT */
+/*                 BY THE EXEC AFTER THE FIELD TABLE WAS KEYED)      */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON)  PAD('_')
+  ! TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(OFF) PAD('_')
+  # TYPE(OUTPUT) INTENS(LOW)  COLOR(TURQ)  CAPS(OFF)
+  $ TYPE(TEXT)   INTENS(HIGH) COLOR(YELLOW) SKIP(ON)
+)BODY EXPAND(//) WIDTH(80)
+%-/-/- MEGABANK - PRODUCT PARAMETER CHANGE SET -/-/-
+%Command ===>_ZCMD                                                             +
++                                                    Business date#PRBDATE +
+$Section A - the change set+
++
++   Product code   %===>_PRPROD    +   (e.g. CA0001, SAV0004)
++   Action         %===>_Z+            %A+Add new product   %U+Update fields
++                                      %W+Withdraw          %C+Close to new
++   Effective date %===>_PREFF   +     (CCYYMMDD - today or later; a
++                                       future date is carried forward)
++
+$Section B - new products only (action A)+
++   Short name     %===>!PRNAME                        +
++
+$Section C - for the approver+
++   Description    %===>!PRDESC                 +
++                       (CR number or reason - shown on the approval list)
++
++   Press%ENTER+to continue.  For%A+or%U+the field change table follows;
++%W+and%C+need no fields.  PF3 cancels.
++
++   Savings rate%reductions+on existing products must be made through
++   option 2 (rate changes) so that customer notices are produced -
++   PIR 2009/301.  This dialog will warn you.
+)INIT
+  .ZVARS  = '(PRACT)'
+  .HELP   = MBKPRDH
+  .CURSOR = PRPROD
+  IF (&PRACT = ' ')
+     &PRACT = U
+)PROC
+  VER (&PRPROD,NB,ALPHAB)
+  VER (&PRPROD,NB,INCLUDE,ALPHA,NUM)
+  VER (&PRACT,NB,LIST,A,U,W,C)
+  VER (&PREFF,NB,NUM)
+  VER (&PREFF,LEN,'=',8)
+  IF (&PRACT = A)
+     VER (&PRNAME,NB)
+  IF (&PRACT NE A)
+     IF (&PRNAME NE ' ')
+        &ZEDSMSG = 'Name not used'
+        &ZEDLMSG = 'The short name is only keyed for a new product (A).'
+        .MSG     = ISRZ001
+        .CURSOR  = PRNAME
+  VER (&PRDESC,NB)
+  *REXX(PREFF,PRBDATE,ZEDSMSG,ZEDLMSG,ZRXRC,ZRXMSG)
+    /* CCYYMMDD VALIDITY - SAME RULE AS MBKPRDCH VALID_DATE */
+    ZRXRC = 0
+    PARSE VAR PREFF Y 5 M 7 D
+    ML = WORD('31 28 31 30 31 30 31 31 30 31 30 31', M + 0)
+    IF M = 2 & Y // 4 = 0 & (Y // 100 <> 0 | Y // 400 = 0) THEN ML=29
+    IF M < 1 | M > 12 | D < 1 | D > ML THEN DO
+       ZEDSMSG = 'Invalid date'
+       ZEDLMSG = 'Effective date' PREFF 'is not a valid CCYYMMDD date.'
+       ZRXRC = 8
+       ZRXMSG = 'ISRZ001'
+    END
+    ELSE IF PREFF < PRBDATE THEN DO
+       ZEDSMSG = 'Date in the past'
+       ZEDLMSG = 'The effective date may not be before' PRBDATE'.'
+       ZRXRC = 8
+       ZRXMSG = 'ISRZ001'
+    END
+  *ENDREXX
+  IF (.MSG NE ' ')
+     .CURSOR = PREFF
+)HELP
+  FIELD(PRACT)  PANEL(MBKPRDH)
+  FIELD(PREFF)  PANEL(MBKPRDH)
+)END

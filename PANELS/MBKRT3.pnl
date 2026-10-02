@@ -1,0 +1,34 @@
+)ATTR DEFAULT(%+_)
+/*********************************************************************/
+/* PANEL    : MBKRT3                                                 */
+/* TITLE    : RATE CHANGES - RELEASE AND SUBMIT CONFIRMATION         */
+/* EXEC     : MBKRTCH (RELEASE_CHANGES)                              */
+/*-------------------------------------------------------------------*/
+/* INRAT01 READS ONLY THE CURRENT GENERATION. RELEASE AGAIN ONLY     */
+/* AFTER INRAT01 HAS RUN - THE EXEC CHECKS (MBKRTREL).               */
+/*-------------------------------------------------------------------*/
+/* 2013-01-21 PDQ  ORIGINAL                                          */
+/*********************************************************************/
+  % TYPE(TEXT)   INTENS(HIGH) COLOR(WHITE) SKIP(ON)
+  + TYPE(TEXT)   INTENS(LOW)  COLOR(GREEN) SKIP(ON)
+  _ TYPE(INPUT)  INTENS(HIGH) COLOR(RED)   CAPS(ON) PAD('_')
+  # TYPE(OUTPUT) INTENS(HIGH) COLOR(YELLOW) CAPS(OFF)
+)BODY WINDOW(64,12)
+%Command ===>_ZCMD                                              +
++
++Approved rate changes ready#RLCOUNT+
++
++They will be written to a new generation of
++  MBK.PRD.INT.RATECHG.INPUT
++and job INRAT01 submitted.  Changes to the customer's
++disadvantage generate notices tonight.
++
++Release now%===>_Z+ (Y/N)
+)INIT
+  &ZWINTTL = 'Release rate changes'
+  .ZVARS   = '(RLCONF)'
+  .CURSOR  = RLCONF
+  .HELP    = MBKRTH
+)PROC
+  VER (&RLCONF,NB,LIST,Y,N)
+)END

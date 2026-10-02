@@ -1,0 +1,88 @@
+***********************************************************************
+* MAPSET   : CFMAP2                                                   *
+* TITLE    : CIF - BRANCH CUSTOMER ACCOUNT LIST                       *
+* PROGRAM  : CFSCRN2   TRANSACTION CF02                               *
+* TERMINAL : 3270 MODEL 2 (24 X 80)                                   *
+*---------------------------------------------------------------------*
+* ASSEMBLE WITH PROC DFHMAPS - PRODUCES PHYSICAL MAP IN               *
+* MBK.PRD.CICS.LOADLIB AND SYMBOLIC MAP IN MBK.PRD.COPYLIB(CFMAP2)    *
+*---------------------------------------------------------------------*
+* 2010-04-12 SAT  ORIGINAL VERSION (REPLACES "SEE CF02" TELLER LIST)  *
+***********************************************************************
+CFMAP2   DFHMSD TYPE=&SYSPARM,                                         X
+               MODE=INOUT,                                             X
+               LANG=COBOL,                                             X
+               STORAGE=AUTO,                                           X
+               CTRL=(FREEKB,FRSET),                                    X
+               TIOAPFX=YES
+*
+CFM02    DFHMDI SIZE=(24,80),                                          X
+               LINE=1,                                                 X
+               COLUMN=1
+*
+*        ---- HEADER ------------------------------------------------
+         DFHMDF POS=(1,1),LENGTH=4,ATTRB=(ASKIP,BRT),                  X
+               INITIAL='CF02'
+         DFHMDF POS=(1,20),LENGTH=34,ATTRB=(ASKIP,BRT),                X
+               INITIAL='MEGABANK PLC  -  CUSTOMER ACCOUNTS'
+DATE     DFHMDF POS=(1,62),LENGTH=10,ATTRB=(ASKIP,NORM)
+TIME     DFHMDF POS=(1,73),LENGTH=8,ATTRB=(ASKIP,NORM)
+*        ---- KEY ---------------------------------------------------
+         DFHMDF POS=(3,1),LENGTH=11,ATTRB=(ASKIP,NORM),                X
+               INITIAL='CIF NUMBER:'
+CIFNO    DFHMDF POS=(3,13),LENGTH=12,ATTRB=(UNPROT,BRT,IC,FSET),       X
+               HILIGHT=UNDERLINE
+         DFHMDF POS=(3,26),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(3,30),LENGTH=5,ATTRB=(ASKIP,NORM),                X
+               INITIAL='NAME:'
+CUSTNM   DFHMDF POS=(3,36),LENGTH=44,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(4,30),LENGTH=7,ATTRB=(ASKIP,NORM),                X
+               INITIAL='STATUS:'
+CSTAT    DFHMDF POS=(4,38),LENGTH=10,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(4,50),LENGTH=6,ATTRB=(ASKIP,NORM),                X
+               INITIAL='ACCTS:'
+ACCTCT   DFHMDF POS=(4,57),LENGTH=3,ATTRB=(ASKIP,BRT)
+*        ---- ACCOUNT LIST ----------------------------------------
+         DFHMDF POS=(6,1),LENGTH=79,ATTRB=(ASKIP,BRT),                 X
+               INITIAL='S SORT CD  ACCOUNT  TYPE PRODUCT    ST        LX
+               EDGER       AVAILABLE   OD LIMIT'
+SEL1     DFHMDF POS=(7,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL1     DFHMDF POS=(7,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL2     DFHMDF POS=(8,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL2     DFHMDF POS=(8,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL3     DFHMDF POS=(9,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL3     DFHMDF POS=(9,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL4     DFHMDF POS=(10,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL4     DFHMDF POS=(10,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL5     DFHMDF POS=(11,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL5     DFHMDF POS=(11,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL6     DFHMDF POS=(12,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL6     DFHMDF POS=(12,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL7     DFHMDF POS=(13,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL7     DFHMDF POS=(13,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL8     DFHMDF POS=(14,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL8     DFHMDF POS=(14,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL9     DFHMDF POS=(15,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL9     DFHMDF POS=(15,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL10    DFHMDF POS=(16,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL10    DFHMDF POS=(16,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL11    DFHMDF POS=(17,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL11    DFHMDF POS=(17,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+SEL12    DFHMDF POS=(18,1),LENGTH=1,ATTRB=(UNPROT,BRT,FSET)
+ACL12    DFHMDF POS=(18,3),LENGTH=77,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(20,1),LENGTH=40,ATTRB=(ASKIP,NORM),               X
+               INITIAL='S = SELECT  (D=DETAIL  H=HISTORY  O=SOS)'
+         DFHMDF POS=(20,45),LENGTH=5,ATTRB=(ASKIP,NORM),               X
+               INITIAL='PAGE:'
+PAGENO   DFHMDF POS=(20,51),LENGTH=3,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(20,55),LENGTH=3,ATTRB=(ASKIP,NORM),               X
+               INITIAL=' OF'
+PAGES    DFHMDF POS=(20,59),LENGTH=3,ATTRB=(ASKIP,BRT)
+*        ---- MESSAGE AND KEYS --------------------------------------
+MSG      DFHMDF POS=(22,1),LENGTH=79,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,1),LENGTH=49,ATTRB=(ASKIP,NORM),               X
+               INITIAL='ENTER=PROCESS PF3=EXIT PF7=BACK PF8=FWD PF12=CFX
+               01'
+*
+         DFHMSD TYPE=FINAL
+         END

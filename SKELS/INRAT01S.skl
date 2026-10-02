@@ -1,0 +1,58 @@
+)CM ******************************************************************
+)CM SKELETON : INRAT01S
+)CM TITLE    : INTEREST RATE CHANGES - ANNOUNCE AND APPLY (ON REQUEST)
+)CM BASED ON : MBK.PRD.JCL(INRAT01) - KEEP IN STEP
+)CM CALLED BY: MBKRTCH (RELEASE_CHANGES) VIA MBKSUBMT
+)CM ------------------------------------------------------------------
+)CM VARIABLES
+)CM   SRATEDSN  ABSOLUTE GENERATION JUST WRITTEN, E.G.
+)CM             MBK.PRD.INT.RATECHG.INPUT.G0042V00
+)CM ------------------------------------------------------------------
+)CM RATEIN IS OVERRIDDEN TO THE GENERATION THE DIALOG WROTE. THE
+)CM PRODUCTION JCL STILL POINTS AT MBK.PRD.CNTL(RATECHG) - PIR
+)CM 2014/221. THE ABSOLUTE NAME IS USED SO A SECOND RELEASE BEFORE
+)CM THIS JOB RUNS CANNOT CHANGE WHAT IT READS.
+)CM IN010 IS THE PRE-2010 DFSORT PACKING STEP - REMOVED, THE DIALOG
+)CM NOW PACKS THE RATES ITSELF.
+)CM ------------------------------------------------------------------
+)CM 2010-04-12 AOS  ORIGINAL
+)CM 2013-01-21 PDQ  ABSOLUTE GENERATION
+)CM ******************************************************************
+)SET SDB2 = N
+)IM MBKJOBC
+//*------------------------------------------------------------------*
+//* INRAT01 - INTEREST RATE CHANGES (ON REQUEST FROM MBKRTCH)
+//* INPUT GENERATION: &SRATEDSN
+//*------------------------------------------------------------------*
+//* IN020 - LIST THE RATE CHANGE INPUT (HEX - RATES ARE PACKED)
+//*------------------------------------------------------------------*
+//IN020    EXEC PGM=IDCAMS
+//SYSPRINT DD SYSOUT=*
+//RATEIN   DD DISP=SHR,DSN=&SRATEDSN
+//SYSIN    DD *
+  PRINT INFILE(RATEIN) DUMP
+/*
+//*------------------------------------------------------------------*
+//* IN030 - ANNOUNCE / APPLY RATE CHANGES (INRAT010)
+//*------------------------------------------------------------------*
+//IN030    EXEC MBKBATCH,PGM=INRAT010,HLQ='&SHLQ'
+//STEP.RATEIN   DD DISP=SHR,DSN=&SRATEDSN
+//STEP.RATEPEND DD DISP=OLD,DSN=&SHLQ..INT.RATEPEND
+//STEP.PRDPARM  DD DISP=OLD,DSN=&SHLQ..PRD.PARMS
+//STEP.ACCTMAST DD DISP=OLD,DSN=&SHLQ..DDA.ACCTMAST
+//STEP.CIFMAST  DD DISP=SHR,DSN=&SHLQ..CIF.MASTER
+//STEP.NOTICES  DD DSN=&SHLQ..INT.RATE.NOTICES(+1),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(CYL,(5,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=250,BLKSIZE=0)
+//STEP.REPORT   DD SYSOUT=(R,,INR1),
+//            DCB=(RECFM=FBA,LRECL=133,BLKSIZE=0)
+//*------------------------------------------------------------------*
+//* IN040 - NOTIFY THE SUBMITTER IF ANY CHANGE WAS REJECTED (RC 4)
+//*------------------------------------------------------------------*
+//IN040    EXEC PGM=IKJEFT01,COND=(0,EQ,IN030.STEP)
+//SYSTSPRT DD SYSOUT=*
+//SYSTSIN  DD *
+ SEND 'INRAT01 RC>0 - RATE CHANGES REJECTED, SEE INR1 REPORT' +
+      USER(&SUSER) LOGON
+/*
